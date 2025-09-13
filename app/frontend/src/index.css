@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    font-family: "Segoe UI", Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 0 0% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 3.9%;
+        --primary: 0 0% 9%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 0 0% 96.1%;
+        --secondary-foreground: 0 0% 9%;
+        --muted: 0 0% 96.1%;
+        --muted-foreground: 0 0% 45.1%;
+        --accent: 0 0% 96.1%;
+        --accent-foreground: 0 0% 9%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 89.8%;
+        --input: 0 0% 89.8%;
+        --ring: 0 0% 3.9%;
+        --chart-1: 12 76% 61%;
+        --chart-2: 173 58% 39%;
+        --chart-3: 197 37% 24%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 27 87% 67%;
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 0 0% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 0 0% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 0 0% 14.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 0 0% 14.9%;
+        --muted-foreground: 0 0% 63.9%;
+        --accent: 0 0% 14.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 14.9%;
+        --input: 0 0% 14.9%;
+        --ring: 0 0% 83.1%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+    }
+}
+
+/* Make sure map container is fully responsive in its column */
+.map-container > div {
+    width: 100%;
+    height: 100%;
+}
+
+/* Recording Circle Button */
+.record-button {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #ff00c8, #8400ff, #ff00c8);
+    background-size: 300% 300%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-position 2s linear;
+    overflow: hidden;
+}
+
+.record-button:hover {
+    background-position: 100% 50%;
+}
+
+.record-button .icon {
+    color: #ffffff;
+    width: 20px;
+    height: 20px;
+}
+
+.record-button.recording {
+    animation: gradient-border 3s linear infinite;
+}
+
+/* Radiating circles when recording */
+.record-button.recording::before,
+.record-button.recording::after {
+    content: "";
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 9999px;
+    background: radial-gradient(rgba(255, 0, 200, 0.3), transparent);
+    opacity: 0;
+    animation: radiate 2s infinite;
+}
+
+.record-button.recording::before {
+    animation-delay: 0s;
+}
+
+.record-button.recording::after {
+    animation-delay: 1s;
+}
+
+@keyframes radiate {
+    0% {
+        transform: scale(0.7);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+/* Gradient Border for the highlighted listing card */
+@keyframes gradient-border {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.best-listing-card {
+    position: relative;
+    border: none;
+    animation: gradient-border 3s linear infinite;
+    border-radius: 0.5rem;
+    padding: 3px;
+    background: linear-gradient(90deg, #ff00c8, #8400ff, #ff00c8);
+    background-size: 300% 300%;
+}
+
+.best-listing-card > * {
+    background: #fff;
+    border-radius: 0.5rem;
+}
+
+/* Simple Utility Classes */
+.border-b-0 {
+    border-bottom-width: 0 !important;
+}
+
+.border-r {
+    border-right-width: 1px;
+}
