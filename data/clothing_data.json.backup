@@ -1,0 +1,452 @@
+[
+  {
+    "id": "CLO001",
+    "title": "Essential Cotton T-Shirt",
+    "description": "A soft and comfortable organic cotton t-shirt with a modern relaxed fit. Perfect for everyday wear with its breathable fabric and timeless design. Features a crew neck and short sleeves.",
+    "brand": "Zara",
+    "category": "T-Shirts & Tops",
+    "subcategory": "Basic Tees",
+    "gender": "unisex",
+    "price": 19.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["white", "black", "navy", "grey"],
+    "sizes": ["XS", "S", "M", "L", "XL", "XXL"],
+    "materials": ["100% Organic Cotton"],
+    "style_tags": ["casual", "basic", "everyday", "minimalist"],
+    "season": "all-season",
+    "care_instructions": "Machine wash cold, tumble dry low",
+    "availability": "in_stock",
+    "stock_count": 250,
+    "ratings": {
+      "average": 4.3,
+      "count": 892
+    },
+    "images": [
+      "tshirt_white_front.jpg",
+      "tshirt_white_back.jpg"
+    ],
+    "sustainability_score": 8,
+    "fit": "regular"
+  },
+  {
+    "id": "CLO002",
+    "title": "Premium Wool Blend Coat",
+    "description": "Luxurious wool blend coat with elegant tailoring. Features a double-breasted design with notched lapels, side pockets, and a sophisticated silhouette that works for both business and evening occasions.",
+    "brand": "Hugo Boss",
+    "category": "Outerwear",
+    "subcategory": "Coats",
+    "gender": "women",
+    "price": 299.99,
+    "sale_price": 219.99,
+    "on_sale": true,
+    "colors": ["black", "camel", "navy"],
+    "sizes": ["34", "36", "38", "40", "42", "44"],
+    "materials": ["70% Wool", "25% Polyester", "5% Cashmere"],
+    "style_tags": ["elegant", "business", "formal", "winter"],
+    "season": "fall-winter",
+    "care_instructions": "Dry clean only",
+    "availability": "in_stock",
+    "stock_count": 45,
+    "ratings": {
+      "average": 4.7,
+      "count": 234
+    },
+    "images": [
+      "coat_black_model.jpg",
+      "coat_detail.jpg"
+    ],
+    "sustainability_score": 6,
+    "fit": "tailored"
+  },
+  {
+    "id": "CLO003",
+    "title": "Skinny Fit Denim Jeans",
+    "description": "Classic skinny fit jeans in premium stretch denim. These jeans offer comfort and style with a flattering silhouette. Features five pockets, zip fly, and signature stitching details.",
+    "brand": "Levi's",
+    "category": "Jeans & Trousers",
+    "subcategory": "Skinny Jeans",
+    "gender": "women",
+    "price": 89.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["dark_blue", "light_blue", "black", "white"],
+    "sizes": ["24", "25", "26", "27", "28", "29", "30", "31", "32"],
+    "materials": ["98% Cotton", "2% Elastane"],
+    "style_tags": ["denim", "skinny", "casual", "versatile"],
+    "season": "all-season",
+    "care_instructions": "Machine wash cold, hang dry",
+    "availability": "in_stock",
+    "stock_count": 180,
+    "ratings": {
+      "average": 4.2,
+      "count": 1567
+    },
+    "images": [
+      "jeans_dark_blue.jpg",
+      "jeans_fit.jpg"
+    ],
+    "sustainability_score": 7,
+    "fit": "skinny"
+  },
+  {
+    "id": "CLO004",
+    "title": "Athletic Performance Hoodie",
+    "description": "Technical hoodie designed for active lifestyles. Features moisture-wicking fabric, adjustable hood, kangaroo pocket, and reflective details. Perfect for workouts or casual wear.",
+    "brand": "Nike",
+    "category": "Sportswear",
+    "subcategory": "Hoodies",
+    "gender": "men",
+    "price": 65.99,
+    "sale_price": 45.99,
+    "on_sale": true,
+    "colors": ["black", "grey", "navy", "red"],
+    "sizes": ["S", "M", "L", "XL", "XXL"],
+    "materials": ["65% Cotton", "35% Polyester"],
+    "style_tags": ["athletic", "casual", "performance", "streetwear"],
+    "season": "fall-spring",
+    "care_instructions": "Machine wash cold, tumble dry medium",
+    "availability": "in_stock",
+    "stock_count": 95,
+    "ratings": {
+      "average": 4.5,
+      "count": 423
+    },
+    "images": [
+      "hoodie_black_front.jpg",
+      "hoodie_detail.jpg"
+    ],
+    "sustainability_score": 5,
+    "fit": "regular"
+  },
+  {
+    "id": "CLO005",
+    "title": "Silk Blend Midi Dress",
+    "description": "Elegant midi dress in luxurious silk blend fabric. Features a wrap design, 3/4 sleeves, and a flattering A-line silhouette. Perfect for special occasions or professional settings.",
+    "brand": "Massimo Dutti",
+    "category": "Dresses",
+    "subcategory": "Midi Dresses",
+    "gender": "women",
+    "price": 179.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["burgundy", "navy", "emerald", "black"],
+    "sizes": ["XS", "S", "M", "L", "XL"],
+    "materials": ["60% Silk", "40% Viscose"],
+    "style_tags": ["elegant", "formal", "midi", "wrap"],
+    "season": "all-season",
+    "care_instructions": "Hand wash cold or dry clean",
+    "availability": "in_stock",
+    "stock_count": 78,
+    "ratings": {
+      "average": 4.6,
+      "count": 156
+    },
+    "images": [
+      "dress_burgundy_model.jpg",
+      "dress_detail.jpg"
+    ],
+    "sustainability_score": 7,
+    "fit": "regular"
+  },
+  {
+    "id": "CLO006",
+    "title": "Classic Oxford Shirt",
+    "description": "Timeless oxford shirt in premium cotton. Features button-down collar, chest pocket, and classic cut. A wardrobe essential that works for both casual and business casual looks.",
+    "brand": "Ralph Lauren",
+    "category": "Shirts",
+    "subcategory": "Oxford Shirts",
+    "gender": "men",
+    "price": 79.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["white", "light_blue", "pink", "yellow"],
+    "sizes": ["S", "M", "L", "XL", "XXL"],
+    "materials": ["100% Cotton"],
+    "style_tags": ["classic", "business", "oxford", "preppy"],
+    "season": "all-season",
+    "care_instructions": "Machine wash warm, iron if needed",
+    "availability": "in_stock",
+    "stock_count": 120,
+    "ratings": {
+      "average": 4.4,
+      "count": 678
+    },
+    "images": [
+      "oxford_white.jpg",
+      "oxford_lightblue.jpg"
+    ],
+    "sustainability_score": 6,
+    "fit": "regular"
+  },
+  {
+    "id": "CLO007",
+    "title": "Leather Ankle Boots",
+    "description": "Stylish ankle boots in genuine leather with a comfortable block heel. Features side zip closure, pointed toe, and versatile design that pairs well with jeans or dresses.",
+    "brand": "Zara",
+    "category": "Shoes",
+    "subcategory": "Ankle Boots",
+    "gender": "women",
+    "price": 129.99,
+    "sale_price": 89.99,
+    "on_sale": true,
+    "colors": ["black", "brown", "tan"],
+    "sizes": ["35", "36", "37", "38", "39", "40", "41"],
+    "materials": ["100% Genuine Leather"],
+    "style_tags": ["leather", "ankle", "block_heel", "versatile"],
+    "season": "fall-winter",
+    "care_instructions": "Use leather care products, avoid water",
+    "availability": "in_stock",
+    "stock_count": 67,
+    "ratings": {
+      "average": 4.1,
+      "count": 289
+    },
+    "images": [
+      "boots_black_side.jpg",
+      "boots_detail.jpg"
+    ],
+    "sustainability_score": 4,
+    "fit": "true_to_size"
+  },
+  {
+    "id": "CLO008",
+    "title": "Cashmere Blend Sweater",
+    "description": "Luxurious cashmere blend sweater with a timeless crew neck design. Soft, warm, and lightweight with a comfortable fit. Perfect for layering or wearing alone.",
+    "brand": "COS",
+    "category": "Knitwear",
+    "subcategory": "Sweaters",
+    "gender": "women",
+    "price": 149.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["cream", "grey", "camel", "black"],
+    "sizes": ["XS", "S", "M", "L", "XL"],
+    "materials": ["30% Cashmere", "70% Wool"],
+    "style_tags": ["cashmere", "luxury", "crew_neck", "cozy"],
+    "season": "fall-winter",
+    "care_instructions": "Hand wash cold, lay flat to dry",
+    "availability": "in_stock",
+    "stock_count": 54,
+    "ratings": {
+      "average": 4.8,
+      "count": 127
+    },
+    "images": [
+      "sweater_cream.jpg",
+      "sweater_texture.jpg"
+    ],
+    "sustainability_score": 8,
+    "fit": "relaxed"
+  },
+  {
+    "id": "CLO009",
+    "title": "Chino Pants",
+    "description": "Classic chino pants in stretch cotton twill. Features a slim fit, flat front, and versatile styling that works for both casual and smart-casual occasions.",
+    "brand": "J.Crew",
+    "category": "Jeans & Trousers",
+    "subcategory": "Chinos",
+    "gender": "men",
+    "price": 59.99,
+    "sale_price": 39.99,
+    "on_sale": true,
+    "colors": ["khaki", "navy", "olive", "grey"],
+    "sizes": ["30", "31", "32", "33", "34", "36", "38"],
+    "materials": ["97% Cotton", "3% Elastane"],
+    "style_tags": ["chinos", "smart_casual", "slim_fit", "versatile"],
+    "season": "all-season",
+    "care_instructions": "Machine wash cold, tumble dry low",
+    "availability": "in_stock",
+    "stock_count": 145,
+    "ratings": {
+      "average": 4.3,
+      "count": 512
+    },
+    "images": [
+      "chinos_khaki.jpg",
+      "chinos_navy.jpg"
+    ],
+    "sustainability_score": 6,
+    "fit": "slim"
+  },
+  {
+    "id": "CLO010",
+    "title": "Summer Floral Blouse",
+    "description": "Lightweight blouse with beautiful floral print. Features a relaxed fit, short sleeves, and button-front closure. Perfect for warm weather and casual summer outings.",
+    "brand": "H&M",
+    "category": "Shirts",
+    "subcategory": "Blouses",
+    "gender": "women",
+    "price": 29.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["white_floral", "navy_floral", "pink_floral"],
+    "sizes": ["XS", "S", "M", "L", "XL"],
+    "materials": ["100% Viscose"],
+    "style_tags": ["floral", "summer", "casual", "feminine"],
+    "season": "spring-summer",
+    "care_instructions": "Machine wash cold, hang dry",
+    "availability": "in_stock",
+    "stock_count": 98,
+    "ratings": {
+      "average": 4.0,
+      "count": 334
+    },
+    "images": [
+      "blouse_white_floral.jpg",
+      "blouse_detail.jpg"
+    ],
+    "sustainability_score": 5,
+    "fit": "relaxed"
+  },
+  {
+    "id": "CLO011",
+    "title": "Minimalist White Sneakers",
+    "description": "Clean and minimal white sneakers with premium leather construction. Features cushioned sole, perforated details, and timeless design that goes with everything.",
+    "brand": "Common Projects",
+    "category": "Shoes",
+    "subcategory": "Sneakers",
+    "gender": "unisex",
+    "price": 199.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["white", "off_white"],
+    "sizes": ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+    "materials": ["100% Leather"],
+    "style_tags": ["minimalist", "white", "leather", "premium"],
+    "season": "all-season",
+    "care_instructions": "Clean with damp cloth, use leather protector",
+    "availability": "in_stock",
+    "stock_count": 87,
+    "ratings": {
+      "average": 4.6,
+      "count": 445
+    },
+    "images": [
+      "sneakers_white_side.jpg",
+      "sneakers_detail.jpg"
+    ],
+    "sustainability_score": 6,
+    "fit": "true_to_size"
+  },
+  {
+    "id": "CLO012",
+    "title": "Denim Jacket",
+    "description": "Classic denim jacket with authentic vintage wash. Features button front, chest pockets, and relaxed fit. A timeless piece that adds casual style to any outfit.",
+    "brand": "Levi's",
+    "category": "Outerwear",
+    "subcategory": "Denim Jackets",
+    "gender": "unisex",
+    "price": 79.99,
+    "sale_price": 59.99,
+    "on_sale": true,
+    "colors": ["medium_blue", "dark_blue", "light_blue"],
+    "sizes": ["XS", "S", "M", "L", "XL", "XXL"],
+    "materials": ["100% Cotton"],
+    "style_tags": ["denim", "vintage", "casual", "classic"],
+    "season": "spring-fall",
+    "care_instructions": "Machine wash cold, tumble dry low",
+    "availability": "in_stock",
+    "stock_count": 156,
+    "ratings": {
+      "average": 4.4,
+      "count": 789
+    },
+    "images": [
+      "denim_jacket_medium.jpg",
+      "denim_jacket_back.jpg"
+    ],
+    "sustainability_score": 7,
+    "fit": "relaxed"
+  },
+  {
+    "id": "CLO013",
+    "title": "Business Blazer",
+    "description": "Professional blazer in premium wool blend fabric. Features notched lapels, single-button closure, and structured shoulders. Perfect for business meetings and formal occasions.",
+    "brand": "Hugo Boss",
+    "category": "Blazers & Suits",
+    "subcategory": "Blazers",
+    "gender": "women",
+    "price": 249.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["black", "navy", "charcoal"],
+    "sizes": ["34", "36", "38", "40", "42", "44"],
+    "materials": ["65% Wool", "30% Polyester", "5% Elastane"],
+    "style_tags": ["business", "professional", "formal", "structured"],
+    "season": "all-season",
+    "care_instructions": "Dry clean only",
+    "availability": "in_stock",
+    "stock_count": 34,
+    "ratings": {
+      "average": 4.7,
+      "count": 198
+    },
+    "images": [
+      "blazer_black_front.jpg",
+      "blazer_detail.jpg"
+    ],
+    "sustainability_score": 6,
+    "fit": "tailored"
+  },
+  {
+    "id": "CLO014",
+    "title": "High-Waisted Yoga Leggings",
+    "description": "Performance leggings with high waistband and four-way stretch. Features moisture-wicking fabric, side pockets, and compression fit. Perfect for yoga, gym, or athleisure wear.",
+    "brand": "Lululemon",
+    "category": "Sportswear",
+    "subcategory": "Leggings",
+    "gender": "women",
+    "price": 89.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["black", "navy", "grey", "burgundy"],
+    "sizes": ["XXS", "XS", "S", "M", "L", "XL"],
+    "materials": ["78% Nylon", "22% Lycra"],
+    "style_tags": ["athletic", "high_waisted", "performance", "yoga"],
+    "season": "all-season",
+    "care_instructions": "Machine wash cold, hang dry",
+    "availability": "in_stock",
+    "stock_count": 203,
+    "ratings": {
+      "average": 4.8,
+      "count": 1234
+    },
+    "images": [
+      "leggings_black.jpg",
+      "leggings_fit.jpg"
+    ],
+    "sustainability_score": 5,
+    "fit": "compression"
+  },
+  {
+    "id": "CLO015",
+    "title": "Polo Shirt",
+    "description": "Classic polo shirt in premium pique cotton. Features three-button placket, ribbed collar and cuffs, and comfortable regular fit. A versatile piece for smart-casual occasions.",
+    "brand": "Ralph Lauren",
+    "category": "T-Shirts & Tops",
+    "subcategory": "Polo Shirts",
+    "gender": "men",
+    "price": 69.99,
+    "sale_price": null,
+    "on_sale": false,
+    "colors": ["white", "navy", "red", "green", "yellow"],
+    "sizes": ["S", "M", "L", "XL", "XXL"],
+    "materials": ["100% Cotton"],
+    "style_tags": ["polo", "classic", "smart_casual", "preppy"],
+    "season": "spring-summer",
+    "care_instructions": "Machine wash warm, tumble dry medium",
+    "availability": "in_stock",
+    "stock_count": 167,
+    "ratings": {
+      "average": 4.5,
+      "count": 456
+    },
+    "images": [
+      "polo_navy.jpg",
+      "polo_white.jpg"
+    ],
+    "sustainability_score": 6,
+    "fit": "regular"
+  }
+]
