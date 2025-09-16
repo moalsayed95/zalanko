@@ -5,56 +5,18 @@ import isEqual from "lodash.isequal";
 import useRealTime from "@/hooks/useRealtime";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
 import useAudioPlayer from "@/hooks/useAudioPlayer";
-import { Listing, Preferences, AVAILABLE_FEATURES } from "./types";
+import { Listing } from "./types";
 
-import logo from "./assets/logo.svg";
 import ListingCard from "./components/ui/ListingCard";
-import ProductGallery from "./components/ui/MapView";
+import ProductImage from "./components/ui/ProductImage";
 import { Mic, Home, Heart, MessageCircle, ShoppingBag } from "lucide-react";
-import UserPreferences from "./components/ui/UserPreferences";
 import Messages from "./components/ui/Messages";
+import { getColorHex } from "./utils/colors";
+import { calculatePricing } from "./utils/pricing";
 
 function App() {
     const { t } = useTranslation();
     const [isRecording, setIsRecording] = useState(false);
-    
-    // Color mapping function for displaying actual colors
-    const getColorHex = (colorName: string): string => {
-        const colorMap: { [key: string]: string } = {
-            'white': '#FFFFFF',
-            'black': '#000000',
-            'navy': '#1B263B',
-            'grey': '#6B7280',
-            'gray': '#6B7280',
-            'red': '#DC2626',
-            'blue': '#2563EB',
-            'green': '#059669',
-            'yellow': '#D97706',
-            'purple': '#7C3AED',
-            'pink': '#DB2777',
-            'brown': '#92400E',
-            'beige': '#D2B48C',
-            'orange': '#EA580C',
-            'maroon': '#7F1D1D',
-            'cream': '#FEF3C7',
-            'olive': '#65A30D',
-            'teal': '#0D9488',
-            'coral': '#FB7185',
-            'mustard': '#D97706',
-            'emerald': '#059669',
-            'charcoal': '#374151',
-            'ivory': '#FFFBEB',
-            'khaki': '#CA8A04',
-            'salmon': '#FB7185',
-            'turquoise': '#06B6D4',
-            'burgundy': '#7F1D1D',
-            'mint': '#6EE7B7',
-            'lavender': '#C4B5FD',
-            'rose': '#FB7185'
-        };
-        
-        return colorMap[colorName.toLowerCase()] || '#6B7280'; // fallback to gray
-    };
     const [listings, setListings] = useState<Listing[]>([]);
     const [highlightedListingId, setHighlightedListingId] = useState<string | null>(null);
 
@@ -74,8 +36,6 @@ function App() {
         | undefined
     >();
 
-    const [preferences, setPreferences] = useState<Preferences | undefined>();
-
     const listingsContainerRef = useRef<HTMLDivElement>(null);
 
     const { startSession, addUserAudio, inputAudioBufferClear } = useRealTime({
@@ -90,57 +50,13 @@ function App() {
             stopAudioPlayer();
         },
         onReceivedExtensionMiddleTierToolResponse: message => {
-            console.log("Received tool response", message);
+            console.log("🛠️ TOOL RESPONSE:", message.tool_name, message);
             const result = JSON.parse(message.tool_result);
+            console.log("📋 PARSED RESULT:", result);
 
             if (result.action === "update_preferences") {
-                setPreferences(prev => {
-                    const newPreferences = {
-                        ...prev,
-                        features: prev?.features || [...AVAILABLE_FEATURES]
-                    };
-
-                    // Update basic preferences
-                    if (result.preferences.budget) {
-                        newPreferences.budget = result.preferences.budget;
-                    }
-                    if (result.preferences.sizes) {
-                        newPreferences.sizes = result.preferences.sizes;
-                    }
-                    if (result.preferences.preferred_brands) {
-                        newPreferences.preferred_brands = result.preferences.preferred_brands;
-                    }
-                    if (result.preferences.style_preferences) {
-                        newPreferences.style_preferences = result.preferences.style_preferences;
-                    }
-                    if (result.preferences.preferred_colors) {
-                        newPreferences.preferred_colors = result.preferences.preferred_colors;
-                    }
-                    if (result.preferences.avoided_materials) {
-                        newPreferences.avoided_materials = result.preferences.avoided_materials;
-                    }
-
-                    // Update features
-                    if (result.preferences.features) {
-                        // Initialize features array if it doesn't exist
-                        if (!newPreferences.features) {
-                            newPreferences.features = [...AVAILABLE_FEATURES];
-                        }
-
-                        // Update each feature's enabled status
-                        Object.entries(result.preferences.features).forEach(([id, enabled]) => {
-                            const featureIndex = newPreferences.features.findIndex(f => f.id === id);
-                            if (featureIndex !== -1) {
-                                newPreferences.features[featureIndex] = {
-                                    ...newPreferences.features[featureIndex],
-                                    enabled: enabled as boolean
-                                };
-                            }
-                        });
-                    }
-
-                    return newPreferences;
-                });
+                // Preferences handling removed since UserPreferences component is not being used
+                console.log("Preferences updated:", result.preferences);
             } else if (result.products) {
                 const newListings = result.products;
                 if (!isEqual(listings, newListings)) {
@@ -162,6 +78,7 @@ function App() {
                 setPage("messages");
             } else if (typeof result.id === "string") {
                 // Highlight the product
+                console.log("🎯 HIGHLIGHTING PRODUCT:", result.id);
                 setHighlightedListingId(result.id);
             } else if (typeof result.favorite_id === "string") {
                 // Add or remove from favorites
@@ -207,16 +124,22 @@ function App() {
 
     useEffect(() => {
         if (highlightedListingId && listingsContainerRef.current) {
+            console.log("🔄 SCROLL EFFECT: Scrolling to product", highlightedListingId);
             const container = listingsContainerRef.current;
             const highlightedCard = container.querySelector(`[data-listing-id="${highlightedListingId}"]`);
 
             if (highlightedCard) {
+                console.log("✅ SCROLL: Found card element, scrolling into view");
                 highlightedCard.scrollIntoView({
                     behavior: "smooth",
                     block: "nearest",
                     inline: "center"
                 });
+            } else {
+                console.log("❌ SCROLL: Could not find card element for", highlightedListingId);
             }
+        } else {
+            console.log("⏭️ SCROLL: No highlighted listing or container not ready");
         }
     }, [highlightedListingId]);
 
@@ -436,7 +359,7 @@ function App() {
                                             const listing = listings.find(l => l.id === itemId);
                                             if (!listing) return null;
                                             
-                                            const currentPrice = listing.on_sale && listing.sale_price ? listing.sale_price : listing.price;
+                                            const { currentPrice } = calculatePricing(listing.price, listing.sale_price, listing.on_sale);
                                             
                                             return (
                                                 <div key={itemId} className="flex items-center gap-4 p-4 border border-gray-700 rounded-lg bg-gray-700/30">
@@ -464,7 +387,7 @@ function App() {
                                                 cartItems.reduce((total, itemId) => {
                                                     const listing = listings.find(l => l.id === itemId);
                                                     if (!listing) return total;
-                                                    const price = listing.on_sale && listing.sale_price ? listing.sale_price : listing.price;
+                                                    const { currentPrice: price } = calculatePricing(listing.price, listing.sale_price, listing.on_sale);
                                                     return total + price;
                                                 }, 0).toFixed(2)
                                             }</span>
@@ -495,22 +418,22 @@ function App() {
                                                 return '/api/placeholder/600/800';
                                             };
                                             
-                                            const currentPrice = highlightedProduct.on_sale && highlightedProduct.sale_price ? highlightedProduct.sale_price : highlightedProduct.price;
-                                            const hasDiscount = highlightedProduct.on_sale && highlightedProduct.sale_price;
+                                            const { currentPrice, hasDiscount, originalPrice } = calculatePricing(
+                                                highlightedProduct.price, 
+                                                highlightedProduct.sale_price, 
+                                                highlightedProduct.on_sale
+                                            );
                                             
                                             return (
                                                 <div className="flex gap-8 bg-gray-800 rounded-xl p-6 shadow-lg">
                                                     {/* Large Product Image */}
                                                     <div className="w-1/2">
-                                                        <div className="aspect-[3/4] bg-gradient-to-br from-gray-700 to-gray-600 rounded-lg overflow-hidden">
-                                                            <img
+                                                        <div className="aspect-[3/4] rounded-lg overflow-hidden">
+                                                            <ProductImage
                                                                 src={getImageUrl()}
                                                                 alt={highlightedProduct.title}
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    const target = e.target as HTMLImageElement;
-                                                                    target.style.display = 'none';
-                                                                }}
+                                                                category={highlightedProduct.category}
+                                                                className="w-full h-full object-cover rounded-lg"
                                                             />
                                                         </div>
                                                     </div>
@@ -526,8 +449,8 @@ function App() {
                                                         <div className="mb-6">
                                                             <div className="flex items-center gap-3 mb-2">
                                                                 <span className="text-4xl font-bold text-white">€{currentPrice}</span>
-                                                                {hasDiscount && (
-                                                                    <span className="text-xl text-gray-500 line-through">€{highlightedProduct.price}</span>
+                                                                {hasDiscount && originalPrice && (
+                                                                    <span className="text-xl text-gray-500 line-through">€{originalPrice}</span>
                                                                 )}
                                                             </div>
                                                             {hasDiscount && (
@@ -596,7 +519,7 @@ function App() {
                                                         {/* Add to Cart Button */}
                                                         <div className="mt-auto">
                                                             <button 
-                                                                onClick={() => onAddToCart?.(highlightedProduct.id)}
+                                                                onClick={() => handleAddToCart(highlightedProduct.id)}
                                                                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105"
                                                             >
                                                                 Add to Cart
@@ -633,7 +556,7 @@ function App() {
                             </>
                         ) : (
                             <div className="container mx-auto p-4">
-                                <p className="text-center text-lg text-gray-400">{page === "favorites" ? t("No favorites yet.") : t("No products found.")}</p>
+                                <p className="text-center text-lg text-gray-400">{page === "favorites" ? t("products.noFavoritesYet") : t("products.noProductsFound")}</p>
                             </div>
                         )}
                     </>

@@ -40,13 +40,13 @@ _search_tool_schema = {
 _get_product_details_schema = {
     "type": "function",
     "name": "get_product_details",
-    "description": "Get detailed information about a specific clothing item when user asks for more details about a product",
+    "description": "Switch focus to and get detailed information about a specific clothing item. Use when user asks about 'that product', 'the blue one', 'the second option', or wants to see details of a specific product from the suggestions.",
     "parameters": {
         "type": "object",
         "properties": {
             "product_id": {
                 "type": "string",
-                "description": "The ID of the clothing item to get details for"
+                "description": "The ID of the clothing item to focus on and get details for (e.g., 'CLO001', 'CLO005')"
             }
         },
         "required": ["product_id"],
@@ -211,8 +211,8 @@ async def _search_tool(
 ) -> ToolResult:
     query = args['query']
     filters = args.get('filters', {})
-    
-    print(f"Searching for '{query}' with filters: {filters}")
+
+    print(f"🔍 SEARCH: Looking for '{query}' with filters: {filters}")
     
     # Use filters if provided, otherwise just do vector search
     if filters:
@@ -258,13 +258,23 @@ async def _search_tool(
         
         products.append(product)
 
+    # Log the product IDs that are available for switching
+    product_ids = [p['id'] for p in products]
+    print(f"📦 SEARCH RESULTS: Found {len(products)} products: {product_ids}")
+
     return ToolResult({"products": products}, ToolResultDirection.TO_CLIENT)
 
 
-async def _get_product_details_tool( 
+async def _get_product_details_tool(
     args: Any
 ) -> ToolResult:
-    return ToolResult({"product_id": args['product_id']}, ToolResultDirection.TO_CLIENT)
+    product_id = args['product_id']
+    print(f"🔄 PRODUCT SWITCH: User asked for details on product {product_id}")
+
+    # Return the product ID in the format that triggers frontend highlighting
+    result = {"id": product_id}
+    print(f"✅ TOOL RESPONSE: Switching main view to product {product_id}")
+    return ToolResult(result, ToolResultDirection.TO_CLIENT)
 
 async def _add_to_cart_tool( 
     args: Any

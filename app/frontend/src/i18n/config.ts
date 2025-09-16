@@ -42,10 +42,15 @@ i18next
         },
         fallbackLng: "en",
         supportedLngs: Object.keys(supportedLngs),
-        debug: import.meta.env.DEV,
+        debug: false, // Disable debug mode to reduce console noise
         interpolation: {
             escapeValue: false // not needed for react as it escapes by default
-        }
+        },
+        // Add missing key handling
+        saveMissing: import.meta.env.DEV,
+        missingKeyHandler: import.meta.env.DEV ? (lng, ns, key) => {
+            console.warn(`Missing translation key: ${lng}.${ns}.${key}`);
+        } : undefined
     });
 
 export default i18next;

@@ -1,21 +1,32 @@
 {
     "app": {
-        "title": "データと話す",
+        "title": "Zalanko - AIファッションアシスタント",
         "footer": "Azure AI Search + Azure OpenAI で構築",
         "stopRecording": "録音を停止",
         "startRecording": "録音を開始",
         "stopConversation": "会話を停止"
     },
     "status": {
-        "notRecordingMessage": "Contoso 従業員の福利厚生について質問してください",
+        "notRecordingMessage": "会話を開始",
         "conversationInProgress": "会話が進行中"
     },
-    "history": {
-        "answerHistory": "回答履歴",
-        "noHistory": "まだ履歴はありません。"
+    "products": {
+        "noProductsFound": "商品が見つかりませんでした。",
+        "noFavoritesYet": "まだお気に入りがありません。",
+        "searchPlaceholder": "ファッションアイテムを検索...",
+        "addToCart": "カートに追加",
+        "addToWishlist": "お気に入りに追加",
+        "viewDetails": "詳細を見る"
     },
-    "groundingFiles": {
-        "title": "グラウンディング ファイル",
-        "description": "回答をグラウンディングするために使用されるファイル。"
+    "navigation": {
+        "home": "ファッションカタログ",
+        "favorites": "お気に入り",
+        "cart": "ショッピングカート",
+        "messages": "メッセージ"
+    },
+    "voice": {
+        "startListening": "音声検索を開始",
+        "listening": "聞いています...",
+        "processing": "処理中..."
     }
 }

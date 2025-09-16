@@ -1,21 +1,32 @@
 {
     "app": {
-        "title": "Domagoj - Real Estate Assistant",
+        "title": "Zalanko - Asistente de Moda AI",
         "footer": "Creado con Azure AI Search + Azure OpenAI",
         "stopRecording": "Detener grabación",
         "startRecording": "Comenzar grabación",
         "stopConversation": "Detener conversación"
     },
     "status": {
-        "notRecordingMessage": "Pregunta cualquier cosa sobre los beneficios de los empleados de Contoso",
+        "notRecordingMessage": "Comenzar conversación",
         "conversationInProgress": "Conversación en progreso"
     },
-    "history": {
-        "answerHistory": "Historial de respuestas",
-        "noHistory": "Aún no hay historial."
+    "products": {
+        "noProductsFound": "No se encontraron productos.",
+        "noFavoritesYet": "Aún no hay favoritos.",
+        "searchPlaceholder": "Buscar artículos de moda...",
+        "addToCart": "Añadir al Carrito",
+        "addToWishlist": "Añadir a Favoritos",
+        "viewDetails": "Ver Detalles"
     },
-    "groundingFiles": {
-        "title": "Archivos de fundamentación",
-        "description": "Archivos utilizados para fundamentar las respuestas."
+    "navigation": {
+        "home": "Catálogo de Moda",
+        "favorites": "Tus Favoritos",
+        "cart": "Carrito de Compras",
+        "messages": "Mensajes"
+    },
+    "voice": {
+        "startListening": "Comenzar Búsqueda por Voz",
+        "listening": "Escuchando...",
+        "processing": "Procesando..."
     }
 }

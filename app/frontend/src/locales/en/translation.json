@@ -1,6 +1,6 @@
 {
     "app": {
-        "title": "Domagoj - Real Estate Assistant",
+        "title": "Zalanko - AI Fashion Assistant",
         "footer": "Built with Azure AI Search + Azure OpenAI",
         "stopRecording": "Stop recording",
         "startRecording": "Start recording",
@@ -10,12 +10,23 @@
         "notRecordingMessage": "Start Conversation",
         "conversationInProgress": "Conversation in progress"
     },
-    "history": {
-        "answerHistory": "Answer history",
-        "noHistory": "No history yet."
+    "products": {
+        "noProductsFound": "No products found.",
+        "noFavoritesYet": "No favorites yet.",
+        "searchPlaceholder": "Search for fashion items...",
+        "addToCart": "Add to Cart",
+        "addToWishlist": "Add to Wishlist",
+        "viewDetails": "View Details"
     },
-    "groundingFiles": {
-        "title": "Grounding files",
-        "description": "Files used to ground the answers."
+    "navigation": {
+        "home": "Fashion Catalog",
+        "favorites": "Your Favorites",
+        "cart": "Shopping Cart",
+        "messages": "Messages"
+    },
+    "voice": {
+        "startListening": "Start Voice Search",
+        "listening": "Listening...",
+        "processing": "Processing..."
     }
 }

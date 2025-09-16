@@ -1,21 +1,32 @@
 {
     "app": {
-        "title": "Domagoj - Real Estate Assistant",
+        "title": "Zalanko - Assistant Mode AI",
         "footer": "Créée avec Azure AI Search + Azure OpenAI",
         "stopRecording": "Arrêter l'enregistrement",
         "startRecording": "Commencer l'enregistrement",
         "stopConversation": "Arrêter la conversation"
     },
     "status": {
-        "notRecordingMessage": "Posez des questions sur les avantages sociaux des employés de Contoso",
+        "notRecordingMessage": "Commencer la conversation",
         "conversationInProgress": "Conversation en cours"
     },
-    "history": {
-        "answerHistory": "Historique des réponses",
-        "noHistory": "Pas encore d'historique."
+    "products": {
+        "noProductsFound": "Aucun produit trouvé.",
+        "noFavoritesYet": "Pas encore de favoris.",
+        "searchPlaceholder": "Rechercher des articles de mode...",
+        "addToCart": "Ajouter au Panier",
+        "addToWishlist": "Ajouter aux Favoris",
+        "viewDetails": "Voir les Détails"
     },
-    "groundingFiles": {
-        "title": "Fichiers d'ancrage",
-        "description": "Fichiers utilisés pour ancrer les réponses."
+    "navigation": {
+        "home": "Catalogue Mode",
+        "favorites": "Vos Favoris",
+        "cart": "Panier",
+        "messages": "Messages"
+    },
+    "voice": {
+        "startListening": "Commencer la Recherche Vocale",
+        "listening": "À l'écoute...",
+        "processing": "Traitement..."
     }
 }
