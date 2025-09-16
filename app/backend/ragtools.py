@@ -57,7 +57,7 @@ _get_product_details_schema = {
 _add_to_cart_schema = {
     "type": "function",
     "name": "add_to_cart",
-    "description": "Add a clothing item to the shopping cart with specified size and color",
+    "description": "Add a clothing item to the shopping cart with specified size and color. Use when users say 'add this to cart', 'buy this item', 'I want to purchase this', or similar phrases about the currently discussed product.",
     "parameters": {
         "type": "object",
         "properties": {
@@ -88,7 +88,7 @@ _add_to_cart_schema = {
 _manage_wishlist_schema = {
     "type": "function",
     "name": "manage_wishlist",
-    "description": "Add or remove a clothing item from the user's wishlist",
+    "description": "Add or remove a clothing item from the user's wishlist/favorites. Use when users say contextual phrases like 'add this to favorites', 'save this item', 'I like this one', or 'remove from favorites' about the currently discussed product.",
     "parameters": {
         "type": "object",
         "properties": {
@@ -288,11 +288,16 @@ async def _add_to_cart_tool(
     }, ToolResultDirection.TO_CLIENT)
 
 async def _manage_wishlist_tool(args: Any) -> ToolResult:
-    return ToolResult({
-        "action": "manage_wishlist",
-        "product_id": args['product_id'],
-        "wishlist_action": args['action']
-    }, ToolResultDirection.TO_CLIENT)
+    product_id = args['product_id']
+    action = args['action']
+
+    print(f"💖 WISHLIST ACTION: {action} product {product_id}")
+
+    # Return the product ID in the format frontend expects for favorites
+    result = {"favorite_id": product_id}
+    print(f"✅ WISHLIST RESPONSE: {result}")
+
+    return ToolResult(result, ToolResultDirection.TO_CLIENT)
 
 
 async def _navigate_page_tool(args: Any) -> ToolResult:

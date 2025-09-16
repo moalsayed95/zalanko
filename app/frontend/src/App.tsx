@@ -82,12 +82,19 @@ function App() {
                 setHighlightedListingId(result.id);
             } else if (typeof result.favorite_id === "string") {
                 // Add or remove from favorites
+                console.log("💖 FAVORITES ACTION: Toggling favorite for", result.favorite_id);
                 setFavorites(prev => {
                     if (prev.includes(result.favorite_id)) {
+                        console.log("➖ FAVORITES: Removing from favorites");
                         return prev.filter(item => item !== result.favorite_id);
                     }
+                    console.log("➕ FAVORITES: Adding to favorites");
                     return [...prev, result.favorite_id];
                 });
+            } else if (result.action === "add_to_cart") {
+                // Add to cart from AI tool
+                console.log("🛒 CART ACTION: Adding to cart", result.product_id);
+                handleAddToCart(result.product_id);
             } else if (typeof result.navigate_to === "string") {
                 const destination = result.navigate_to as "main" | "favorites";
                 setPage(destination);
@@ -260,13 +267,20 @@ function App() {
                                         : "text-gray-400 hover:text-white hover:bg-gray-700/70"
                                 }`}
                             >
-                                <Heart
-                                    className={`mr-2 h-5 w-5 transition-colors ${
-                                        page === "favorites"
-                                            ? "text-white fill-current"
-                                            : "text-gray-500 group-hover:text-white"
-                                    }`}
-                                />
+                                <div className="relative">
+                                    <Heart
+                                        className={`mr-2 h-5 w-5 transition-colors ${
+                                            page === "favorites"
+                                                ? "text-white fill-current"
+                                                : "text-gray-500 group-hover:text-white"
+                                        }`}
+                                    />
+                                    {favorites.length > 0 && (
+                                        <div className="absolute -top-2 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center animate-pulse">
+                                            <span className="text-white text-xs font-bold">{favorites.length}</span>
+                                        </div>
+                                    )}
+                                </div>
                                 Your Favorites
                                 {page === "favorites" && (
                                     <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"></div>
@@ -404,8 +418,136 @@ function App() {
                     <>
                         {displayedListings.length > 0 ? (
                             <>
-                                {/* Main Product Detail View - Centered in Container */}
-                                {highlightedListingId && (
+                                {/* Favorites Page - Vertical List Layout */}
+                                {page === "favorites" ? (
+                                    <div className="container mx-auto p-4">
+                                        <div className="bg-gray-800 rounded-xl shadow-lg">
+                                            {/* Favorites Header */}
+                                            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                                                <h1 className="text-2xl font-bold text-white">Your Favorites ({favorites.length})</h1>
+                                                {favorites.length > 0 && (
+                                                    <button
+                                                        onClick={() => setFavorites([])}
+                                                        className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                                                    >
+                                                        Clear All
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Favorites List */}
+                                            <div className="divide-y divide-gray-700">
+                                                {displayedListings.map((listing) => {
+                                                    const { currentPrice, hasDiscount, originalPrice } = calculatePricing(
+                                                        listing.price,
+                                                        listing.sale_price,
+                                                        listing.on_sale
+                                                    );
+
+                                                    const getImageUrl = (): string => {
+                                                        if (listing.imageUrls && listing.imageUrls.length > 0) {
+                                                            return listing.imageUrls[0];
+                                                        }
+                                                        return '/api/placeholder/300/400';
+                                                    };
+
+                                                    return (
+                                                        <div key={listing.id} className="flex gap-4 p-6 hover:bg-gray-700/30 transition-colors">
+                                                            {/* Product Image */}
+                                                            <div className="w-24 h-32 flex-shrink-0">
+                                                                <ProductImage
+                                                                    src={getImageUrl()}
+                                                                    alt={listing.title}
+                                                                    category={listing.category}
+                                                                    className="w-full h-full object-cover rounded-lg"
+                                                                />
+                                                            </div>
+
+                                                            {/* Product Details */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="mb-2">
+                                                                    <h3 className="text-lg font-semibold text-white truncate">{listing.title}</h3>
+                                                                    <p className="text-gray-400 text-sm">{listing.brand} • {listing.category}</p>
+                                                                </div>
+
+                                                                {/* Price */}
+                                                                <div className="mb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-xl font-bold text-purple-300">€{currentPrice}</span>
+                                                                        {hasDiscount && originalPrice && (
+                                                                            <span className="text-sm text-gray-500 line-through">€{originalPrice}</span>
+                                                                        )}
+                                                                        {hasDiscount && (
+                                                                            <span className="bg-red-900/30 text-red-400 px-2 py-1 rounded-full text-xs">SALE</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Colors and Tags */}
+                                                                <div className="mb-3">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        {/* Colors */}
+                                                                        <div className="flex gap-1">
+                                                                            {listing.colors.slice(0, 3).map((color, index) => (
+                                                                                <div
+                                                                                    key={index}
+                                                                                    className="w-4 h-4 rounded-full border border-gray-500"
+                                                                                    style={{ backgroundColor: getColorHex(color) }}
+                                                                                    title={color}
+                                                                                />
+                                                                            ))}
+                                                                            {listing.colors.length > 3 && (
+                                                                                <span className="text-xs text-gray-400 ml-1">+{listing.colors.length - 3}</span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Material Tag */}
+                                                                        <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full">
+                                                                            {listing.materials[0]}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Ratings */}
+                                                                {listing.ratings.average && (
+                                                                    <div className="flex items-center text-sm mb-3">
+                                                                        <div className="flex items-center">
+                                                                            {[1,2,3,4,5].map((star) => (
+                                                                                <span key={star} className={`text-sm ${star <= Math.floor(listing.ratings.average || 0) ? 'text-yellow-400' : 'text-gray-600'}`}>★</span>
+                                                                            ))}
+                                                                        </div>
+                                                                        <span className="text-gray-300 ml-1">{listing.ratings.average}</span>
+                                                                        <span className="text-gray-500 ml-1">({listing.ratings.count})</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Actions */}
+                                                            <div className="flex flex-col gap-2 items-end justify-center">
+                                                                <button
+                                                                    onClick={() => setFavorites(prev => prev.filter(id => id !== listing.id))}
+                                                                    className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-900/20 transition-all"
+                                                                    title="Remove from favorites"
+                                                                >
+                                                                    <Heart className="w-5 h-5 fill-current" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleAddToCart(listing.id)}
+                                                                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105"
+                                                                >
+                                                                    Add to Cart
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Main Product Detail View - Centered in Container */}
+                                        {highlightedListingId && (
                                     <div className="container mx-auto p-4 mb-8">
                                         {(() => {
                                             const highlightedProduct = displayedListings.find(l => l.id === highlightedListingId) || displayedListings[0];
@@ -532,27 +674,29 @@ function App() {
                                     </div>
                                 )}
                                 
-                                {/* Other Suggestions Section - Full Width */}
-                                <div className="w-full px-4">
-                                    <div className="mb-6">
-                                        <h2 className="text-2xl font-bold text-white text-center">Other Suggestions</h2>
-                                    </div>
-                                    <div
-                                        ref={listingsContainerRef}
-                                        className="flex gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                                    >
-                                        {displayedListings.filter(l => l.id !== highlightedListingId).map(l => (
-                                            <div key={l.id} className="w-[300px] flex-none" data-listing-id={l.id}>
-                                                <ListingCard 
-                                                    listing={l} 
-                                                    highlight={false} 
-                                                    isFavorite={favorites.includes(l.id)}
-                                                    onAddToCart={handleAddToCart}
-                                                />
+                                        {/* Other Suggestions Section - Full Width */}
+                                        <div className="w-full px-4">
+                                            <div className="mb-6">
+                                                <h2 className="text-2xl font-bold text-white text-center">Other Suggestions</h2>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                            <div
+                                                ref={listingsContainerRef}
+                                                className="flex gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                            >
+                                                {displayedListings.filter(l => l.id !== highlightedListingId).map(l => (
+                                                    <div key={l.id} className="w-[300px] flex-none" data-listing-id={l.id}>
+                                                        <ListingCard
+                                                            listing={l}
+                                                            highlight={false}
+                                                            isFavorite={favorites.includes(l.id)}
+                                                            onAddToCart={handleAddToCart}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </>
                         ) : (
                             <div className="container mx-auto p-4">
