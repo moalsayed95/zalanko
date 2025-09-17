@@ -44,6 +44,9 @@ Zalanko is a modern fashion e-commerce platform that combines real-time voice in
 - **Hybrid Search**: Combines vector similarity with traditional filters
 
 ### Fashion-Focused Features
+- **Virtual Try-On**: AI-powered virtual try-on using Google Vertex AI Gemini 2.5 Flash Image Preview
+- **Voice-Activated Try-On**: Say "try this on virtually" to open the try-on modal seamlessly
+- **Real-time Image Generation**: High-quality virtual try-on results (1.6MB+ images) in 10-30 seconds
 - Detailed product information (materials, sizing, care instructions)
 - Style preferences tracking and personalized recommendations
 - Shopping cart and wishlist functionality
@@ -60,15 +63,21 @@ Zalanko is a modern fashion e-commerce platform that combines real-time voice in
 - **WebSocket** - Real-time communication
 
 ### Backend Dependencies
-- **aiohttp** - Async HTTP server
+- **aiohttp** - Async HTTP server with CORS support
 - **Azure SDK** - Search, Identity, and Storage integration
 - **OpenAI** - Azure OpenAI for embeddings and chat
+- **Google Generative AI** - Vertex AI Gemini for virtual try-on
+- **Pillow** - Image processing and validation
 - **python-dotenv** - Environment configuration
 
 ### Azure Services
 - **Azure AI Search** - Vector and filtered search
 - **Azure OpenAI** - GPT realtime and text-embedding models
 - **Azure Storage** - Product image storage
+
+### Google Cloud Services
+- **Vertex AI** - Gemini 2.5 Flash Image Preview for virtual try-on
+- **Google Cloud Project** - API key authentication for Gemini access
 
 ## Data Structure
 
@@ -117,6 +126,7 @@ Zalanko is a modern fashion e-commerce platform that combines real-time voice in
 
 2. Configure backend environment (create `.env` file):
 ```
+# Azure Services
 AZURE_OPENAI_ENDPOINT=your-openai-endpoint
 AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime
@@ -125,6 +135,15 @@ AZURE_SEARCH_SERVICE_NAME=your-search-service
 AZURE_SEARCH_API_KEY=your-search-key
 AZURE_SEARCH_INDEX=fashion-products
 AZURE_STORAGE_ACCOUNT_NAME=your-storage-account
+AZURE_STORAGE_CONTAINER_NAME=product-images
+AZURE_STORAGE_CONNECTION_STRING=your-storage-connection
+
+# Google Cloud Services (for Virtual Try-On)
+GOOGLE_CLOUD_API_KEY=your-google-api-key
+GOOGLE_CLOUD_PROJECT_ID=your-project-id
+
+# Backend Configuration
+BACKEND_URL=http://localhost:8765
 ```
 
 ### Database Setup
@@ -183,6 +202,7 @@ docker run -p 8000:8000 zalanko
 5. **`navigate_page`** - UI navigation control
 6. **`get_recommendations`** - Personalized product suggestions
 7. **`update_style_preferences`** - User preference tracking
+8. **`virtual_try_on`** - AI-powered virtual try-on image generation
 
 ### Search Filters
 - **Brand filtering**: Exact match on fashion brands
@@ -192,6 +212,40 @@ docker run -p 8000:8000 zalanko
 - **Size availability**: Size-based filtering
 - **Material search**: Fabric and material matching
 - **Sale status**: On-sale product filtering
+
+## AI-Powered Virtual Try-On
+
+### Technology Stack
+- **AI Model**: Google Vertex AI Gemini 2.5 Flash Image Preview
+- **Location**: Global endpoint (required for image generation)
+- **Input**: Person photo + clothing item image + natural language prompt
+- **Output**: High-quality virtual try-on images (832x1248px, ~1.6MB)
+- **Processing Time**: 10-30 seconds per generation
+
+### Virtual Try-On Features
+- **Voice Activation**: Say "try this on virtually" to automatically open try-on modal
+- **Seamless UX**: Voice command opens modal with product pre-loaded
+- **Image Processing**: Automatic validation, resizing, and format conversion
+- **Quality Output**: Realistic lighting, proper fit, natural appearance
+- **Download & Share**: Save generated images locally or share with others
+
+### Technical Implementation
+```python
+# Virtual try-on service integration
+from virtual_tryon_service import virtual_tryon_service
+
+# Generate virtual try-on
+success, result_image, error = await virtual_tryon_service.generate_virtual_tryon(
+    person_image_bytes,
+    clothing_image_bytes,
+    product_info
+)
+```
+
+### API Endpoints
+- **POST** `/api/virtual-tryon` - Generate virtual try-on images
+- **GET** `/api/virtual-tryon-results/{filename}` - Serve generated images
+- **OPTIONS** `/api/virtual-tryon` - CORS preflight handling
 
 ## GPT Realtime API Implementation
 
@@ -203,7 +257,7 @@ docker run -p 8000:8000 zalanko
 
 ### Real-time Features
 - **WebSocket Communication**: Bidirectional communication between frontend and backend
-- **Tool Integration**: Server-side RAG tools for fashion search
+- **Tool Integration**: Server-side RAG tools for fashion search and virtual try-on
 - **Voice Processing**: Real-time audio streaming and processing
 - **Session Management**: Conversation state and context retention
 
@@ -260,5 +314,11 @@ docker run -p 8000:8000 zalanko
 - `"I prefer minimalist style and sustainable materials"`
 - `"What colors go well with this outfit?"`
 - `"Show me similar items to this dress"`
+
+### Virtual Try-On Commands
+- `"Try this on virtually"`
+- `"Show me wearing this dress"`
+- `"How would this look on me?"`
+- `"Let me see myself in this outfit"`
 
 ---

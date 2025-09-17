@@ -10,14 +10,17 @@ The backend is built with Python using aiohttp for async HTTP handling and integ
 app/backend/
 ├── app.py                    # Main application server
 ├── rtmt.py                   # Real-time middle tier (WebSocket proxy)
-├── ragtools.py               # RAG tools for fashion search
+├── ragtools.py               # RAG tools for fashion search and virtual try-on
 ├── search_manager.py         # Azure AI Search integration
 ├── index_manager.py          # Search index creation and data loading
 ├── image_proxy.py            # Authenticated image serving
+├── virtual_tryon_service.py  # Google Vertex AI virtual try-on service
+├── virtual_tryon_endpoint.py # Virtual try-on API endpoints
 ├── image_tools/              # Image management utilities
 │   ├── image_utils.py        # Image URL generation service
 │   └── ...                   # Additional image tools
 ├── setup_intvect.py          # Legacy integrated vectorization setup
+├── test_gemini/              # Virtual try-on testing and validation
 └── tests/                    # Integration tests
 ```
 
@@ -61,6 +64,8 @@ search_manager = SearchManager(
 **Endpoints**:
 - `/realtime` - WebSocket endpoint for real-time AI conversation
 - `/api/images/{product_id}/{filename}` - Authenticated image serving
+- `/api/virtual-tryon` - Virtual try-on generation endpoint
+- `/api/virtual-tryon-results/{filename}` - Serve generated virtual try-on images
 - `/` - Static file serving for frontend
 
 ### 2. `rtmt.py` - Real-Time Middle Tier
@@ -119,6 +124,7 @@ class RTMiddleTier:
 5. **`navigate_page`** - UI navigation control
 6. **`get_recommendations`** - Personalized suggestions
 7. **`update_style_preferences`** - User preference tracking
+8. **`virtual_try_on`** - AI-powered virtual try-on image generation
 
 **Tool Result Flow**:
 - Tools execute server-side with Azure AI Search integration
@@ -237,7 +243,92 @@ async def get_blob_stream(self, product_id: str, filename: str):
 **Endpoints**:
 - `/api/images/{product_id}/{filename}` - Serves authenticated product images
 
-### 7. `image_tools/image_utils.py` - Image URL Service
+### 7. `virtual_tryon_service.py` - Google Vertex AI Virtual Try-On
+
+**Purpose**: Core service for generating virtual try-on images using Google Vertex AI Gemini 2.5 Flash Image Preview model.
+
+**Key Capabilities**:
+
+#### Image Processing
+```python
+class VirtualTryOnService:
+    def validate_image(self, image_data: bytes, max_size_mb: int = 10) -> bool:
+        # Validates file size, dimensions, and format
+        # Supports images up to 8000x8000 pixels
+
+    def preprocess_image(self, image_data: bytes, target_format: str = "JPEG") -> bytes:
+        # Converts format, resizes large images
+        # Maintains aspect ratio, optimizes for AI processing
+```
+
+#### Virtual Try-On Generation
+```python
+async def generate_virtual_tryon(
+    self,
+    person_image: bytes,
+    clothing_image: bytes,
+    product_info: Optional[Dict[str, Any]] = None
+) -> Tuple[bool, Optional[bytes], Optional[str]]:
+    # Generates high-quality virtual try-on images
+    # Enhanced prompting based on product information
+    # Returns success status, image bytes, and error message
+```
+
+**AI Model Configuration**:
+- **Model**: `gemini-2.5-flash-image-preview`
+- **Location**: `global` (required for image generation)
+- **Authentication**: Google Cloud API key
+- **Input**: Person image + clothing image + enhanced prompt
+- **Output**: High-resolution PNG images (typically 832x1248px, ~1.6MB)
+
+**Safety and Validation**:
+- Comprehensive image validation (size, format, dimensions)
+- Safe prompting for fashion content
+- Error handling for API failures
+- Image preprocessing for optimal results
+
+### 8. `virtual_tryon_endpoint.py` - Virtual Try-On API
+
+**Purpose**: HTTP endpoints for virtual try-on functionality with CORS support and file serving.
+
+**Endpoints**:
+
+#### POST `/api/virtual-tryon`
+```python
+async def virtual_tryon_handler(request):
+    # Accepts: product_id, person_image_base64, user_message
+    # Calls virtual try-on RAG tool
+    # Returns: generated image URL or error
+```
+
+#### GET `/api/virtual-tryon-results/{filename}`
+```python
+async def virtual_tryon_result_handler(request):
+    # Serves generated virtual try-on images
+    # Security: validates filename pattern
+    # Returns: PNG image with proper headers
+```
+
+#### OPTIONS `/api/virtual-tryon`
+```python
+async def virtual_tryon_options_handler(request):
+    # CORS preflight handling
+    # Allows cross-origin requests from frontend
+```
+
+**Security Features**:
+- Filename validation prevents directory traversal
+- CORS headers for cross-origin access
+- Error handling with appropriate HTTP status codes
+- File serving with proper Content-Type headers
+
+**File Management**:
+- Generated images saved to `virtual_tryon_results/` directory
+- Filename pattern: `tryon_{product_id}_{timestamp}.png`
+- Automatic directory creation
+- File cleanup capabilities (can be extended)
+
+### 9. `image_tools/image_utils.py` - Image URL Service
 
 **Purpose**: Converts product image filenames to authenticated backend URLs for frontend consumption.
 
@@ -274,7 +365,26 @@ Frontend (Voice) → WebSocket → rtmt.py → Azure OpenAI Realtime API
                             Frontend ← Tool Result
 ```
 
-### 2. Search Process
+### 2. Virtual Try-On Processing
+```
+Frontend (Voice: "try this on") → WebSocket → rtmt.py → Azure OpenAI
+                                                   ↓
+                                    Tool Call (virtual_try_on) → ragtools.py
+                                                   ↓
+                                          Modal Opens ← open_virtual_try_on_modal
+                                                   ↓
+Frontend (Image Upload) → POST /api/virtual-tryon → virtual_tryon_endpoint.py
+                                                   ↓
+                                 virtual_tryon_service.py → Google Vertex AI
+                                                   ↓
+                              Generated Image ← Gemini 2.5 Flash Image Preview
+                                                   ↓
+                     Local File Storage ← virtual_tryon_results/tryon_*.png
+                                                   ↓
+                           Frontend ← Image URL: /api/virtual-tryon-results/{filename}
+```
+
+### 3. Search Process
 ```
 1. User speaks: "Show me black leather jackets under €200"
 2. Azure OpenAI processes voice and generates tool call
@@ -285,7 +395,7 @@ Frontend (Voice) → WebSocket → rtmt.py → Azure OpenAI Realtime API
 7. AI provides contextual fashion advice
 ```
 
-### 3. Image Serving
+### 4. Image Serving
 ```
 Frontend requests image → image_proxy.py → Azure Storage Blob
                                      ↓
@@ -346,10 +456,16 @@ AZURE_OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 AZURE_SEARCH_SERVICE_NAME=your-search-service
 AZURE_SEARCH_INDEX=fashion-products
 AZURE_STORAGE_ACCOUNT_NAME=your-storage-account
+AZURE_STORAGE_CONTAINER_NAME=product-images
+AZURE_STORAGE_CONNECTION_STRING=your-storage-connection
+
+# Google Cloud services (for Virtual Try-On)
+GOOGLE_CLOUD_API_KEY=...           # Google Cloud API key
+GOOGLE_CLOUD_PROJECT_ID=...        # Google Cloud project ID
 
 # Optional overrides
-AZURE_OPENAI_API_KEY=...        # Use key instead of managed identity
-AZURE_SEARCH_API_KEY=...        # Use key instead of managed identity
+AZURE_OPENAI_API_KEY=...           # Use key instead of managed identity
+AZURE_SEARCH_API_KEY=...           # Use key instead of managed identity
 BACKEND_URL=http://localhost:8765  # For image URL generation
 ```
 
