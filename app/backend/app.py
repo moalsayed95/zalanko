@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from aiohttp import web
+from aiohttp_cors import setup as cors_setup, ResourceOptions
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import AzureDeveloperCliCredential, DefaultAzureCredential
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ from rtmt import RTMiddleTier
 from search_manager import SearchManager
 from image_tools.image_utils import ImageService
 from image_proxy import setup_image_routes
+from virtual_tryon_endpoint import setup_virtual_tryon_routes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("voicerag")
@@ -36,7 +38,19 @@ async def create_app():
     llm_credential = AzureKeyCredential(llm_key) if llm_key else credential
     search_credential = AzureKeyCredential(search_key) if search_key else credential
     
-    app = web.Application()
+    app = web.Application(
+        client_max_size=50 * 1024 * 1024  # 50MB max request size for virtual try-on images
+    )
+
+    # Setup CORS to allow frontend calls
+    cors_setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            allow_methods="*"
+        )
+    })
 
     rtmt = RTMiddleTier(
         credentials=llm_credential,
@@ -68,6 +82,7 @@ async def create_app():
     5- 'navigate_page' tool: Navigate to different store sections (home, wishlist, cart, orders, categories)
     6- 'get_recommendations' tool: Get personalized product recommendations based on user preferences or similar items
     7- 'update_style_preferences' tool: Store and update the user's fashion preferences, sizes, and style choices
+    8- 'virtual_try_on' tool: **VIRTUAL TRY-ON** - Generate virtual try-on images when users ask to "try on", "see how it looks on me", or "show me wearing this". This creates realistic visualizations of how clothing items would look on the user.
     
     SHOPPING EXPERIENCE GUIDELINES:
     - When showing search results, present items with titles, brands, prices, and key details
@@ -108,6 +123,9 @@ async def create_app():
 
     # Setup image proxy routes for authenticated blob access
     setup_image_routes(app)
+
+    # Setup virtual try-on test endpoint
+    setup_virtual_tryon_routes(app)
 
     current_directory = Path(__file__).parent
     app.add_routes([web.get('/', lambda _: web.FileResponse(current_directory / 'static/index.html'))])

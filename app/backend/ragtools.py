@@ -1,10 +1,36 @@
 from typing import Any
+import base64
+import time
+from datetime import datetime
+import aiohttp
 
 from search_manager import SearchManager
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import DefaultAzureCredential
 
 from rtmt import RTMiddleTier, Tool, ToolResult, ToolResultDirection
+from virtual_tryon_service import virtual_tryon_service
+
+async def fetch_image_from_url(url: str) -> bytes:
+    """Fetch image data from URL."""
+    session = None
+    try:
+        print(f"🌐 Fetching image from: {url}")
+        session = aiohttp.ClientSession()
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            if response.status == 200:
+                image_data = await response.read()
+                print(f"✅ Successfully fetched {len(image_data)} bytes from {url}")
+                return image_data
+            else:
+                print(f"❌ Failed to fetch image: HTTP {response.status}")
+                raise Exception(f"HTTP {response.status}")
+    except Exception as e:
+        print(f"❌ Error fetching image from {url}: {e}")
+        raise
+    finally:
+        if session:
+            await session.close()
 
 _search_tool_schema = {
     "type": "function",
@@ -204,6 +230,31 @@ _update_style_preferences_schema = {
     }
 }
 
+_virtual_try_on_schema = {
+    "type": "function",
+    "name": "virtual_try_on",
+    "description": "Generate a virtual try-on image showing how a clothing item would look on the user. Use when users ask to 'try on', 'see how it looks on me', or 'visualize wearing' a specific product.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "product_id": {
+                "type": "string",
+                "description": "The ID of the clothing item to try on (from current search results or highlighted product)"
+            },
+            "person_image_base64": {
+                "type": "string",
+                "description": "Base64 encoded image of the person (user's photo)"
+            },
+            "user_message": {
+                "type": "string",
+                "description": "Optional message about how the user wants to see the item (e.g., 'show me in casual setting')"
+            }
+        },
+        "required": ["product_id", "person_image_base64"],
+        "additionalProperties": False
+    }
+}
+
 async def _search_tool(
     search_manager, 
     image_service,
@@ -318,6 +369,166 @@ async def _update_style_preferences_tool(args: Any) -> ToolResult:
         "preferences": args
     }, ToolResultDirection.TO_CLIENT)
 
+async def _virtual_try_on_tool(
+    search_manager,
+    image_service,
+    args: Any
+) -> ToolResult:
+    product_id = args['product_id']
+    person_image_base64 = args['person_image_base64']
+    user_message = args.get('user_message', '')
+
+    print(f"🎬 === VIRTUAL TRY-ON STARTED ===")
+    print(f"👗 Product ID: {product_id}")
+    print(f"📸 Person image data length: {len(person_image_base64)} characters")
+    print(f"💬 User message: {user_message}")
+
+    try:
+        # Step 1: Get product details for enhanced prompting
+        print(f"🔍 Step 1: Searching for product {product_id}")
+        results = await search_manager.search_by_filters()
+        print(f"📋 Found {len(results)} total products in database")
+
+        product_info = None
+        product_result = None
+
+        # Find the specific product
+        for i, result in enumerate(results):
+            if result.get("id") == product_id:
+                product_info = {
+                    "title": result.get("title", ""),
+                    "category": result.get("category", ""),
+                    "materials": result.get("materials", []),
+                    "colors": result.get("colors", []),
+                    "brand": result.get("brand", "")
+                }
+                product_result = result
+                print(f"✅ Found product at index {i}: {product_info['title']}")
+                break
+
+        if not product_info:
+            print(f"❌ ERROR: Product {product_id} not found in {len(results)} products")
+            # Log first few product IDs for debugging
+            sample_ids = [r.get("id", "no-id") for r in results[:5]]
+            print(f"🔍 Sample product IDs: {sample_ids}")
+
+            return ToolResult({
+                "action": "virtual_try_on_error",
+                "error": f"Product {product_id} not found in catalog"
+            }, ToolResultDirection.TO_CLIENT)
+
+        # Step 2: Handle person image
+        print(f"🧑 Step 2: Processing person image")
+        try:
+            person_image_bytes = base64.b64decode(person_image_base64)
+            print(f"✅ Successfully decoded person image: {len(person_image_bytes)} bytes")
+        except Exception as e:
+            print(f"❌ ERROR: Failed to decode person image: {e}")
+            return ToolResult({
+                "action": "virtual_try_on_error",
+                "error": "Invalid person image data"
+            }, ToolResultDirection.TO_CLIENT)
+
+        # Step 3: Handle clothing image
+        print(f"👔 Step 3: Processing clothing image")
+        clothing_image_bytes = None
+
+        if product_result and product_result.get("images"):
+            product_images = product_result["images"]
+            print(f"📸 Product has {len(product_images)} images: {product_images[:3]}")
+
+            # Try to fetch the first product image
+            if image_service and len(product_images) > 0:
+                print(f"🔗 Attempting to fetch clothing image via image_service")
+                try:
+                    # Get the first image URL
+                    image_urls = image_service.get_image_urls(product_id, [product_images[0]])
+                    if image_urls and len(image_urls) > 0:
+                        image_url = image_urls[0]
+                        print(f"🌐 Got image URL: {image_url}")
+
+                        # Fetch the actual image data
+                        try:
+                            clothing_image_bytes = await fetch_image_from_url(image_url)
+                            print(f"✅ Successfully fetched clothing image: {len(clothing_image_bytes)} bytes")
+                        except Exception as fetch_error:
+                            print(f"❌ Failed to fetch clothing image: {fetch_error}")
+                    else:
+                        print(f"❌ No image URLs generated for product {product_id}")
+                except Exception as img_error:
+                    print(f"❌ Error getting image URL: {img_error}")
+
+        if not clothing_image_bytes:
+            print(f"⚠️ No clothing image available - returning request for manual upload")
+            return ToolResult({
+                "action": "virtual_try_on_request",
+                "product_id": product_id,
+                "product_info": product_info,
+                "needs_clothing_image": True,
+                "message": f"I need the clothing image for {product_info.get('title', 'this item')} to generate your virtual try-on. The product image couldn't be automatically fetched."
+            }, ToolResultDirection.TO_CLIENT)
+
+        # Step 4: Generate virtual try-on (when we have both images)
+        print(f"🎨 Step 4: Generating virtual try-on with Vertex AI")
+        try:
+            success, result_image, error_msg = await virtual_tryon_service.generate_virtual_tryon(
+                person_image_bytes,
+                clothing_image_bytes,
+                product_info
+            )
+
+            if success and result_image:
+                print(f"🎉 Virtual try-on generation successful: {len(result_image)} bytes")
+
+                # Step 5: Save result to local storage
+                result_filename = f"tryon_{product_id}_{int(time.time())}.png"
+
+                # Create results directory if it doesn't exist
+                from pathlib import Path
+                results_dir = Path("virtual_tryon_results")
+                results_dir.mkdir(exist_ok=True)
+
+                # Save the image file
+                result_path = results_dir / result_filename
+                with open(result_path, "wb") as f:
+                    f.write(result_image)
+
+                print(f"💾 Saved result image: {result_path} ({len(result_image)} bytes)")
+
+                # Return the URL to access the saved image
+                result_url = f"/api/virtual-tryon-results/{result_filename}"
+
+                return ToolResult({
+                    "action": "virtual_try_on_result",
+                    "product_id": product_id,
+                    "image_url": result_url,
+                    "timestamp": datetime.now().isoformat()
+                }, ToolResultDirection.TO_CLIENT)
+            else:
+                print(f"❌ Virtual try-on generation failed: {error_msg}")
+                return ToolResult({
+                    "action": "virtual_try_on_error",
+                    "error": f"Generation failed: {error_msg}"
+                }, ToolResultDirection.TO_CLIENT)
+
+        except Exception as gen_error:
+            print(f"❌ Exception during generation: {gen_error}")
+            return ToolResult({
+                "action": "virtual_try_on_error",
+                "error": f"Generation exception: {str(gen_error)}"
+            }, ToolResultDirection.TO_CLIENT)
+
+    except Exception as e:
+        print(f"❌ VIRTUAL TRY-ON FAILED with exception: {e}")
+        import traceback
+        print(f"📚 Full traceback: {traceback.format_exc()}")
+        return ToolResult({
+            "action": "virtual_try_on_error",
+            "error": f"Virtual try-on failed: {str(e)}"
+        }, ToolResultDirection.TO_CLIENT)
+    finally:
+        print(f"🎬 === VIRTUAL TRY-ON ENDED ===")
+
 
 def attach_rag_tools(rtmt: RTMiddleTier,
     credentials: AzureKeyCredential | DefaultAzureCredential,
@@ -361,4 +572,9 @@ def attach_rag_tools(rtmt: RTMiddleTier,
     rtmt.tools["update_style_preferences"] = Tool(
         schema=_update_style_preferences_schema,
         target=lambda args: _update_style_preferences_tool(args)
+    )
+
+    rtmt.tools["virtual_try_on"] = Tool(
+        schema=_virtual_try_on_schema,
+        target=lambda args: _virtual_try_on_tool(search_manager, image_service, args)
     )

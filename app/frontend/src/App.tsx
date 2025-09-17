@@ -9,7 +9,8 @@ import { Listing } from "./types";
 
 import ListingCard from "./components/ui/ListingCard";
 import ProductImage from "./components/ui/ProductImage";
-import { Mic, Home, Heart, MessageCircle, ShoppingBag } from "lucide-react";
+import VirtualTryOn from "./components/ui/VirtualTryOn";
+import { Mic, Home, Heart, MessageCircle, ShoppingBag, Camera } from "lucide-react";
 import Messages from "./components/ui/Messages";
 import { getColorHex } from "./utils/colors";
 import { calculatePricing } from "./utils/pricing";
@@ -24,6 +25,15 @@ function App() {
     const [favorites, setFavorites] = useState<string[]>([]);
     const [cartItems, setCartItems] = useState<string[]>([]);
     const [page, setPage] = useState<"main" | "favorites" | "messages" | "cart">("main");
+
+    // Virtual Try-On
+    const [showTryOnModal, setShowTryOnModal] = useState(false);
+    const [tryOnProduct, setTryOnProduct] = useState<Listing | null>(null);
+    const [isGeneratingTryOn, setIsGeneratingTryOn] = useState(false);
+    const [tryOnResult, setTryOnResult] = useState<{
+        imageUrl: string;
+        timestamp: Date;
+    } | null>(null);
 
     const [activeContact, setActiveContact] = useState<
         | {
@@ -98,6 +108,30 @@ function App() {
             } else if (typeof result.navigate_to === "string") {
                 const destination = result.navigate_to as "main" | "favorites";
                 setPage(destination);
+            } else if (result.action === "virtual_try_on_request") {
+                // Handle virtual try-on request
+                console.log("👗 VIRTUAL TRY-ON REQUEST:", result);
+                const product = listings.find(l => l.id === result.product_id);
+                if (product) {
+                    setTryOnProduct(product);
+                    setShowTryOnModal(true);
+                    setTryOnResult(null);
+                }
+            } else if (result.action === "virtual_try_on_result") {
+                // Handle virtual try-on result
+                console.log("🎉 VIRTUAL TRY-ON RESULT:", result);
+                setIsGeneratingTryOn(false);
+                if (result.image_url) {
+                    setTryOnResult({
+                        imageUrl: result.image_url,
+                        timestamp: new Date()
+                    });
+                }
+            } else if (result.action === "virtual_try_on_error") {
+                // Handle virtual try-on error
+                console.log("❌ VIRTUAL TRY-ON ERROR:", result.error);
+                setIsGeneratingTryOn(false);
+                // You could show an error toast here
             }
         }
     });
@@ -127,6 +161,111 @@ function App() {
         if (!cartItems.includes(listingId)) {
             setCartItems(prev => [...prev, listingId]);
         }
+    };
+
+    // Virtual Try-On functionality
+    const handleTryOn = (listingId: string) => {
+        const product = listings.find(l => l.id === listingId);
+        if (product) {
+            setTryOnProduct(product);
+            setShowTryOnModal(true);
+            setTryOnResult(null);
+        }
+    };
+
+    const handleGenerateTryOn = async (productId: string, personImageBase64: string) => {
+        console.log("🎨 GENERATING VIRTUAL TRY-ON:", productId);
+        console.log("📸 Person image size:", personImageBase64.length, "characters");
+        setIsGeneratingTryOn(true);
+
+        try {
+            // Make a direct API call to test the virtual try-on backend
+            console.log("📡 Sending virtual try-on request to backend...");
+
+            const requestBody = {
+                product_id: productId,
+                person_image_base64: personImageBase64,
+                user_message: "Testing virtual try-on from UI"
+            };
+
+            console.log("🔍 Request details:", {
+                product_id: productId,
+                person_image_length: personImageBase64.length,
+                timestamp: new Date().toISOString()
+            });
+
+            // Try to call the backend API directly first
+            try {
+                const backendUrl = 'http://localhost:8765/api/virtual-tryon';
+                console.log("🌐 Calling backend URL:", backendUrl);
+
+                const response = await fetch(backendUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log("✅ Backend response:", result);
+
+                    if (result.image_url) {
+                        // Convert relative URL to full backend URL
+                        const fullImageUrl = result.image_url.startsWith('http')
+                            ? result.image_url
+                            : `http://localhost:8765${result.image_url}`;
+
+                        console.log("🖼️ Generated image URL:", fullImageUrl);
+
+                        setTryOnResult({
+                            imageUrl: fullImageUrl,
+                            timestamp: new Date()
+                        });
+                    } else {
+                        console.log("⚠️ No image URL in response");
+                    }
+                } else {
+                    console.log("❌ Backend API not available, status:", response.status);
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (fetchError) {
+                console.log("⚠️ Direct API call failed, falling back to simulation:", fetchError);
+
+                // Fallback: simulate the try-on with detailed logging
+                console.log("💾 Simulated backend call with data:", {
+                    action: "virtual_try_on",
+                    product_id: productId,
+                    person_image_base64: personImageBase64.substring(0, 100) + "...",
+                    timestamp: new Date().toISOString()
+                });
+
+                // Simulate processing time
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Return a test result
+                setTryOnResult({
+                    imageUrl: "/api/placeholder/400/600",
+                    timestamp: new Date()
+                });
+
+                console.log("✅ Virtual try-on simulation completed");
+            }
+
+        } catch (error) {
+            console.error("❌ Virtual try-on failed:", error);
+            // Handle error state
+        } finally {
+            setIsGeneratingTryOn(false);
+        }
+    };
+
+    const handleCloseTryOnModal = () => {
+        setShowTryOnModal(false);
+        setTryOnProduct(null);
+        setTryOnResult(null);
+        setIsGeneratingTryOn(false);
     };
 
     useEffect(() => {
@@ -532,6 +671,12 @@ function App() {
                                                                     <Heart className="w-5 h-5 fill-current" />
                                                                 </button>
                                                                 <button
+                                                                    onClick={() => handleTryOn(listing.id)}
+                                                                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 mr-2"
+                                                                >
+                                                                    Try On
+                                                                </button>
+                                                                <button
                                                                     onClick={() => handleAddToCart(listing.id)}
                                                                     className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105"
                                                                 >
@@ -658,9 +803,16 @@ function App() {
                                                             </div>
                                                         </div>
                                                         
-                                                        {/* Add to Cart Button */}
-                                                        <div className="mt-auto">
-                                                            <button 
+                                                        {/* Action Buttons */}
+                                                        <div className="mt-auto space-y-3">
+                                                            <button
+                                                                onClick={() => handleTryOn(highlightedProduct.id)}
+                                                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-lg font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 flex items-center justify-center gap-3"
+                                                            >
+                                                                <Camera className="w-5 h-5" />
+                                                                Try On Virtually
+                                                            </button>
+                                                            <button
                                                                 onClick={() => handleAddToCart(highlightedProduct.id)}
                                                                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105"
                                                             >
@@ -690,6 +842,7 @@ function App() {
                                                             highlight={false}
                                                             isFavorite={favorites.includes(l.id)}
                                                             onAddToCart={handleAddToCart}
+                                                            onTryOn={handleTryOn}
                                                         />
                                                     </div>
                                                 ))}
@@ -706,6 +859,16 @@ function App() {
                     </>
                 )}
             </main>
+
+            {/* Virtual Try-On Modal */}
+            <VirtualTryOn
+                isOpen={showTryOnModal}
+                onClose={handleCloseTryOnModal}
+                product={tryOnProduct}
+                onGenerateTryOn={handleGenerateTryOn}
+                isGenerating={isGeneratingTryOn}
+                tryOnResult={tryOnResult}
+            />
         </div>
     );
 }

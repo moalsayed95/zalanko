@@ -1,7 +1,7 @@
 import { Listing } from "@/types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./card";
 import ProductImage from "./ProductImage";
-import { Shirt, Star, Tag, Package, Palette, Euro, Heart, Percent, ShoppingCart } from "lucide-react";
+import { Shirt, Star, Tag, Package, Palette, Euro, Heart, Percent, ShoppingCart, Camera } from "lucide-react";
 import { getColorHex, getAvailabilityColor } from "@/utils/colors";
 import { calculatePricing } from "@/utils/pricing";
 
@@ -10,9 +10,10 @@ interface ProductCardProps {
     highlight?: boolean;
     isFavorite?: boolean;
     onAddToCart?: (listingId: string) => void;
+    onTryOn?: (listingId: string) => void;
 }
 
-export default function ListingCard({ listing, highlight = false, isFavorite = false, onAddToCart }: ProductCardProps) {
+export default function ListingCard({ listing, highlight = false, isFavorite = false, onAddToCart, onTryOn }: ProductCardProps) {
     const { currentPrice, hasDiscount, originalPrice } = calculatePricing(
         listing.price, 
         listing.sale_price, 
@@ -110,12 +111,22 @@ export default function ListingCard({ listing, highlight = false, isFavorite = f
             </CardContent>
             
             <CardFooter className="px-4 py-3 bg-gray-700/30 border-t border-gray-700">
-                <button 
-                    onClick={() => onAddToCart?.(listing.id)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 rounded-lg font-semibold text-sm hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105"
-                >
-                    Add to Cart
-                </button>
+                <div className="flex gap-2 w-full">
+                    <button
+                        onClick={() => onTryOn?.(listing.id)}
+                        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-2 rounded-lg font-semibold text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                    >
+                        <Camera className="w-4 h-4" />
+                        Try On
+                    </button>
+                    <button
+                        onClick={() => onAddToCart?.(listing.id)}
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-2 rounded-lg font-semibold text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                    >
+                        <ShoppingCart className="w-4 h-4" />
+                        Add to Cart
+                    </button>
+                </div>
             </CardFooter>
         </Card>
     );
