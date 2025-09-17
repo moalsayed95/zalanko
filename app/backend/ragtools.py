@@ -243,14 +243,14 @@ _virtual_try_on_schema = {
             },
             "person_image_base64": {
                 "type": "string",
-                "description": "Base64 encoded image of the person (user's photo)"
+                "description": "Base64 encoded image of the person (user's photo). Optional - if not provided, will open try-on modal for user to upload photo."
             },
             "user_message": {
                 "type": "string",
                 "description": "Optional message about how the user wants to see the item (e.g., 'show me in casual setting')"
             }
         },
-        "required": ["product_id", "person_image_base64"],
+        "required": ["product_id"],
         "additionalProperties": False
     }
 }
@@ -375,12 +375,14 @@ async def _virtual_try_on_tool(
     args: Any
 ) -> ToolResult:
     product_id = args['product_id']
-    person_image_base64 = args['person_image_base64']
+    person_image_base64 = args.get('person_image_base64', None)
     user_message = args.get('user_message', '')
 
     print(f"🎬 === VIRTUAL TRY-ON STARTED ===")
     print(f"👗 Product ID: {product_id}")
-    print(f"📸 Person image data length: {len(person_image_base64)} characters")
+    print(f"📸 Person image provided: {person_image_base64 is not None}")
+    if person_image_base64:
+        print(f"📸 Person image data length: {len(person_image_base64)} characters")
     print(f"💬 User message: {user_message}")
 
     try:
@@ -419,6 +421,17 @@ async def _virtual_try_on_tool(
 
         # Step 2: Handle person image
         print(f"🧑 Step 2: Processing person image")
+
+        # If no person image provided, open the try-on modal
+        if not person_image_base64:
+            print(f"📱 No person image provided - opening try-on modal")
+            return ToolResult({
+                "action": "open_virtual_try_on_modal",
+                "product_id": product_id,
+                "product_info": product_info,
+                "message": f"I'll open the virtual try-on for {product_info.get('title', 'this item')}. Please upload your photo to see how it looks on you!"
+            }, ToolResultDirection.TO_CLIENT)
+
         try:
             person_image_bytes = base64.b64decode(person_image_base64)
             print(f"✅ Successfully decoded person image: {len(person_image_bytes)} bytes")

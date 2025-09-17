@@ -82,7 +82,7 @@ async def create_app():
     5- 'navigate_page' tool: Navigate to different store sections (home, wishlist, cart, orders, categories)
     6- 'get_recommendations' tool: Get personalized product recommendations based on user preferences or similar items
     7- 'update_style_preferences' tool: Store and update the user's fashion preferences, sizes, and style choices
-    8- 'virtual_try_on' tool: **VIRTUAL TRY-ON** - Generate virtual try-on images when users ask to "try on", "see how it looks on me", or "show me wearing this". This creates realistic visualizations of how clothing items would look on the user.
+    8- 'virtual_try_on' tool: **VIRTUAL TRY-ON** - Generate virtual try-on images when users ask to "try on", "see how it looks on me", or "show me wearing this". If the user hasn't provided a photo, this will open the try-on modal for them to upload their image. This creates realistic visualizations of how clothing items would look on the user.
     
     SHOPPING EXPERIENCE GUIDELINES:
     - When showing search results, present items with titles, brands, prices, and key details

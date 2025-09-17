@@ -117,6 +117,16 @@ function App() {
                     setShowTryOnModal(true);
                     setTryOnResult(null);
                 }
+            } else if (result.action === "open_virtual_try_on_modal") {
+                // Handle voice-activated virtual try-on modal opening
+                console.log("🎙️ VOICE TRY-ON: Opening modal for product", result.product_id);
+                const product = listings.find(l => l.id === result.product_id);
+                if (product) {
+                    setTryOnProduct(product);
+                    setShowTryOnModal(true);
+                    setTryOnResult(null);
+                    console.log("✅ Try-on modal opened for voice request");
+                }
             } else if (result.action === "virtual_try_on_result") {
                 // Handle virtual try-on result
                 console.log("🎉 VIRTUAL TRY-ON RESULT:", result);
