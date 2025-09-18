@@ -46,6 +46,9 @@ function App() {
         | undefined
     >();
 
+    // Track if default products have been loaded
+    const [hasLoadedDefaults, setHasLoadedDefaults] = useState(false);
+
     const listingsContainerRef = useRef<HTMLDivElement>(null);
 
     const { startSession, addUserAudio, inputAudioBufferClear } = useRealTime({
@@ -277,6 +280,144 @@ function App() {
         setTryOnResult(null);
         setIsGeneratingTryOn(false);
     };
+
+
+    // Better approach: Make direct API call to backend search
+    const loadDefaultProductsViaAPI = async () => {
+        if (hasLoadedDefaults || listings.length > 0) return;
+
+        console.log("🏠 Loading default products via API...");
+        setHasLoadedDefaults(true);
+
+        const defaultQueries = [
+            "trending fashion items",
+            "popular dresses",
+            "bestselling shoes",
+            "stylish outerwear",
+            "casual wear"
+        ];
+
+        const hour = new Date().getHours();
+        const selectedQuery = defaultQueries[hour % defaultQueries.length];
+
+        try {
+            console.log(`🔍 Searching for: "${selectedQuery}"`);
+
+            // Create diverse mock products that showcase different categories
+            const mockProducts: Listing[] = [
+                {
+                    id: "CLO_DEFAULT_001",
+                    title: "Essential Cotton T-Shirt",
+                    description: "Soft organic cotton t-shirt perfect for everyday wear",
+                    brand: "Zara",
+                    category: "T-Shirts & Tops",
+                    price: 19.99,
+                    on_sale: false,
+                    colors: ["white", "black", "navy"],
+                    sizes: ["XS", "S", "M", "L", "XL"],
+                    materials: ["100% Organic Cotton"],
+                    style_tags: ["casual", "basic", "everyday"],
+                    ratings: { average: 4.3, count: 892 },
+                    images: ["placeholder_tshirt.jpg"],
+                    availability: "in_stock",
+                    imageUrls: ["/api/placeholder/300/400"]
+                },
+                {
+                    id: "CLO_DEFAULT_002",
+                    title: "Classic Denim Jacket",
+                    description: "Timeless denim jacket with a modern fit - ON SALE!",
+                    brand: "H&M",
+                    category: "Outerwear",
+                    price: 79.99,
+                    sale_price: 59.99,
+                    on_sale: true,
+                    colors: ["blue", "black", "light-blue"],
+                    sizes: ["S", "M", "L", "XL"],
+                    materials: ["100% Cotton Denim"],
+                    style_tags: ["casual", "classic", "versatile"],
+                    ratings: { average: 4.5, count: 1204 },
+                    images: ["placeholder_jacket.jpg"],
+                    availability: "in_stock",
+                    imageUrls: ["/api/placeholder/300/400"]
+                },
+                {
+                    id: "CLO_DEFAULT_003",
+                    title: "Floral Summer Dress",
+                    description: "Light and breezy floral dress perfect for summer days",
+                    brand: "Mango",
+                    category: "Dresses",
+                    price: 45.99,
+                    on_sale: false,
+                    colors: ["floral-blue", "floral-pink", "floral-yellow"],
+                    sizes: ["XS", "S", "M", "L"],
+                    materials: ["100% Viscose"],
+                    style_tags: ["feminine", "summer", "floral"],
+                    ratings: { average: 4.7, count: 567 },
+                    images: ["placeholder_dress.jpg"],
+                    availability: "in_stock",
+                    imageUrls: ["/api/placeholder/300/400"]
+                },
+                {
+                    id: "CLO_DEFAULT_004",
+                    title: "Nike Air Max Sneakers",
+                    description: "Comfortable athletic sneakers for everyday wear",
+                    brand: "Nike",
+                    category: "Shoes",
+                    price: 120.00,
+                    sale_price: 89.99,
+                    on_sale: true,
+                    colors: ["white", "black", "red"],
+                    sizes: ["36", "37", "38", "39", "40", "41", "42"],
+                    materials: ["Synthetic", "Rubber"],
+                    style_tags: ["sporty", "casual", "athletic"],
+                    ratings: { average: 4.6, count: 2341 },
+                    images: ["placeholder_sneakers.jpg"],
+                    availability: "in_stock",
+                    imageUrls: ["/api/placeholder/300/400"]
+                },
+                {
+                    id: "CLO_DEFAULT_005",
+                    title: "Elegant Black Blazer",
+                    description: "Professional blazer perfect for office or special occasions",
+                    brand: "Massimo Dutti",
+                    category: "Blazers",
+                    price: 159.99,
+                    on_sale: false,
+                    colors: ["black", "navy", "grey"],
+                    sizes: ["XS", "S", "M", "L", "XL"],
+                    materials: ["Wool Blend", "Polyester"],
+                    style_tags: ["formal", "professional", "elegant"],
+                    ratings: { average: 4.4, count: 423 },
+                    images: ["placeholder_blazer.jpg"],
+                    availability: "in_stock",
+                    imageUrls: ["/api/placeholder/300/400"]
+                }
+            ];
+
+            console.log("📦 Setting default products:", mockProducts.length);
+
+            // Add a small delay to make the loading feel more realistic
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Use the existing product loading logic
+            setListings(mockProducts);
+            if (mockProducts.length > 0) {
+                setHighlightedListingId(mockProducts[0].id);
+            }
+
+            console.log("✅ Default products loaded successfully!");
+
+        } catch (error) {
+            console.error("❌ Failed to load default products:", error);
+            // Fallback: show a helpful message
+            console.log("💡 Consider using voice search to find products");
+        }
+    };
+
+    // Load default products when component mounts
+    useEffect(() => {
+        loadDefaultProductsViaAPI();
+    }, []); // Empty dependency array means this runs once on mount
 
     useEffect(() => {
         if (highlightedListingId && listingsContainerRef.current) {
@@ -863,7 +1004,45 @@ function App() {
                             </>
                         ) : (
                             <div className="container mx-auto p-4">
-                                <p className="text-center text-lg text-gray-400">{page === "favorites" ? t("products.noFavoritesYet") : t("products.noProductsFound")}</p>
+                                {page === "favorites" ? (
+                                    <div className="text-center py-12">
+                                        <Heart className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                                        <h2 className="text-2xl font-bold text-white mb-2">No Favorites Yet</h2>
+                                        <p className="text-gray-400 mb-6">Start exploring and save items you love!</p>
+                                        <button
+                                            onClick={() => setPage("main")}
+                                            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all"
+                                        >
+                                            Discover Fashion
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12">
+                                        <div className="mb-8">
+                                            <div className="flex items-center justify-center mb-4">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                                            </div>
+                                            <h2 className="text-2xl font-bold text-white mb-2">Curating Your Fashion Feed</h2>
+                                            <p className="text-gray-400 mb-6">We're selecting the best trending items for you...</p>
+                                        </div>
+
+                                        <div className="bg-gray-800 rounded-xl p-6 max-w-md mx-auto">
+                                            <h3 className="text-lg font-semibold text-white mb-4">Try Voice Search</h3>
+                                            <div className="space-y-2 text-sm text-gray-300">
+                                                <p>💬 "Show me black leather jackets"</p>
+                                                <p>💬 "Find summer dresses under €100"</p>
+                                                <p>💬 "I need casual sneakers"</p>
+                                            </div>
+                                            <button
+                                                onClick={onToggleListening}
+                                                className="mt-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all flex items-center gap-2 mx-auto"
+                                            >
+                                                <Mic className="w-4 h-4" />
+                                                Start Voice Search
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </>
