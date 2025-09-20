@@ -5,12 +5,17 @@ This allows direct testing of the virtual try-on pipeline.
 
 import json
 import logging
+import os
+import sys
 from pathlib import Path
 from aiohttp import web
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
 from ragtools import _virtual_try_on_tool
 from search_manager import SearchManager
 from image_tools.image_utils import ImageService
-import os
 
 logger = logging.getLogger("virtual_tryon_endpoint")
 

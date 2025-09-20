@@ -1,37 +1,67 @@
-from typing import Any
+"""
+Improved RAG Tools for Zalanko Fashion Assistant.
+Production-ready implementation with proper error handling, logging, and validation.
+"""
+
 import base64
 import time
 from datetime import datetime
-import aiohttp
+from typing import Any, Dict, List, Optional, Union
 
-from search_manager import SearchManager
+import aiohttp
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import DefaultAzureCredential
 
+from search_manager import SearchManager
 from rtmt import RTMiddleTier, Tool, ToolResult, ToolResultDirection
-from virtual_tryon_service import virtual_tryon_service
+from utils.logger import get_logger
+from exceptions import ExternalServiceError, VirtualTryOnError
+
+# Import virtual_tryon_service with fallback
+try:
+    from services.virtual_tryon_service import virtual_tryon_service
+except ImportError as e:
+    logger = get_logger(__name__)
+    logger.warning(f"Virtual try-on service not available: {e}")
+    virtual_tryon_service = None
+
+logger = get_logger(__name__)
+
 
 async def fetch_image_from_url(url: str) -> bytes:
-    """Fetch image data from URL."""
+    """
+    Fetch image data from URL with proper error handling.
+
+    Args:
+        url: URL to fetch image from
+
+    Returns:
+        Image data as bytes
+
+    Raises:
+        ExternalServiceError: If image fetch fails
+    """
     session = None
     try:
-        print(f"🌐 Fetching image from: {url}")
+        logger.info(f"Fetching image from: {url}")
         session = aiohttp.ClientSession()
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
             if response.status == 200:
                 image_data = await response.read()
-                print(f"✅ Successfully fetched {len(image_data)} bytes from {url}")
+                logger.info(f"Successfully fetched {len(image_data)} bytes from {url}")
                 return image_data
             else:
-                print(f"❌ Failed to fetch image: HTTP {response.status}")
-                raise Exception(f"HTTP {response.status}")
+                logger.error(f"Failed to fetch image: HTTP {response.status}")
+                raise ExternalServiceError(f"Image fetch failed with HTTP {response.status}")
     except Exception as e:
-        print(f"❌ Error fetching image from {url}: {e}")
-        raise
+        logger.error(f"Error fetching image from {url}: {e}")
+        raise ExternalServiceError(f"Image fetch failed: {e}")
     finally:
         if session:
             await session.close()
 
+
+# Tool schema definitions
 _search_tool_schema = {
     "type": "function",
     "name": "search",
@@ -101,7 +131,7 @@ _add_to_cart_schema = {
             },
             "quantity": {
                 "type": "integer",
-                "description": "Quantity to add (default: 1)",
+                "description": "Quantity to add to cart",
                 "default": 1
             }
         },
@@ -110,22 +140,21 @@ _add_to_cart_schema = {
     }
 }
 
-
 _manage_wishlist_schema = {
     "type": "function",
     "name": "manage_wishlist",
-    "description": "Add or remove a clothing item from the user's wishlist/favorites. Use when users say contextual phrases like 'add this to favorites', 'save this item', 'I like this one', or 'remove from favorites' about the currently discussed product.",
+    "description": "Add or remove items from the user's wishlist. Use when users say 'add this to favorites', 'save this item', 'I like this one', or 'remove from wishlist' about a specific product.",
     "parameters": {
         "type": "object",
         "properties": {
             "product_id": {
                 "type": "string",
-                "description": "The ID of the clothing item to add or remove from wishlist"
+                "description": "The ID of the clothing item to add/remove from wishlist"
             },
             "action": {
                 "type": "string",
-                "description": "Either 'add' or 'remove'",
-                "enum": ["add", "remove"]
+                "enum": ["add", "remove"],
+                "description": "Whether to add or remove from wishlist"
             }
         },
         "required": ["product_id", "action"],
@@ -133,25 +162,20 @@ _manage_wishlist_schema = {
     }
 }
 
-
 _navigate_page_schema = {
     "type": "function",
     "name": "navigate_page",
-    "description": "Navigate to different pages in the fashion store",
+    "description": "Navigate to different sections of the fashion store (main, favorites, cart, messages).",
     "parameters": {
         "type": "object",
         "properties": {
-            "page": {
+            "destination": {
                 "type": "string",
-                "description": "The page to navigate to",
-                "enum": ["home", "wishlist", "cart", "orders", "profile", "categories"]
-            },
-            "category": {
-                "type": "string",
-                "description": "Specific category to navigate to (when page is 'categories')"
+                "enum": ["main", "favorites", "cart", "messages", "home", "wishlist"],
+                "description": "The page/section to navigate to (home/main for main page, wishlist/favorites for favorites page)"
             }
         },
-        "required": ["page"],
+        "required": ["destination"],
         "additionalProperties": False
     }
 }
@@ -159,24 +183,24 @@ _navigate_page_schema = {
 _get_recommendations_schema = {
     "type": "function",
     "name": "get_recommendations",
-    "description": "Get personalized clothing recommendations based on user preferences or similar items",
+    "description": "Get personalized product recommendations based on user preferences or similar items.",
     "parameters": {
         "type": "object",
         "properties": {
             "based_on_product_id": {
                 "type": "string",
-                "description": "Get recommendations based on a specific product (optional)"
+                "description": "Get recommendations similar to this product ID"
             },
-            "style_preference": {
+            "category": {
                 "type": "string",
-                "description": "Style preference for recommendations (e.g., 'casual', 'formal', 'sporty')"
+                "description": "Get recommendations from this category"
             },
-            "max_price": {
-                "type": "number",
-                "description": "Maximum price for recommendations"
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of recommendations",
+                "default": 5
             }
         },
-        "required": [],
         "additionalProperties": False
     }
 }
@@ -184,48 +208,43 @@ _get_recommendations_schema = {
 _update_style_preferences_schema = {
     "type": "function",
     "name": "update_style_preferences",
-    "description": "Update the user's fashion and style preferences. Only include fields that were specifically mentioned by the user.",
+    "description": "Store and update the user's fashion preferences, sizes, and style choices for personalized recommendations.",
     "parameters": {
         "type": "object",
         "properties": {
-            "budget": {
+            "preferred_brands": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "User's preferred clothing brands"
+            },
+            "preferred_categories": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "User's preferred clothing categories"
+            },
+            "sizes": {
+                "type": "object",
+                "description": "User's sizes for different categories (e.g., {'shirts': 'M', 'pants': '32', 'shoes': '10'})"
+            },
+            "budget_range": {
                 "type": "object",
                 "properties": {
                     "min": {"type": "number"},
                     "max": {"type": "number"}
-                }
-            },
-            "preferred_brands": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of preferred fashion brands"
-            },
-            "sizes": {
-                "type": "object",
-                "properties": {
-                    "tops": {"type": "string"},
-                    "bottoms": {"type": "string"},
-                    "shoes": {"type": "string"},
-                    "dresses": {"type": "string"}
-                }
+                },
+                "description": "User's budget range"
             },
             "style_preferences": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Style preferences (e.g., 'casual', 'formal', 'sporty', 'minimalist')"
+                "description": "User's style preferences (e.g., 'casual', 'formal', 'sporty')"
             },
-            "preferred_colors": {
+            "colors": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Preferred colors"
-            },
-            "avoided_materials": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Materials to avoid (e.g., 'wool', 'silk')"
+                "description": "User's preferred colors"
             }
         },
-        "required": [],
         "additionalProperties": False
     }
 }
@@ -233,21 +252,17 @@ _update_style_preferences_schema = {
 _virtual_try_on_schema = {
     "type": "function",
     "name": "virtual_try_on",
-    "description": "Generate a virtual try-on image showing how a clothing item would look on the user. Use when users ask to 'try on', 'see how it looks on me', or 'visualize wearing' a specific product.",
+    "description": "Generate virtual try-on images when users ask to 'try on', 'see how it looks on me', or 'show me wearing this'. Creates realistic visualizations of how clothing items would look on the user.",
     "parameters": {
         "type": "object",
         "properties": {
             "product_id": {
                 "type": "string",
-                "description": "The ID of the clothing item to try on (from current search results or highlighted product)"
+                "description": "The ID of the clothing item to try on"
             },
-            "person_image_base64": {
+            "user_image": {
                 "type": "string",
-                "description": "Base64 encoded image of the person (user's photo). Optional - if not provided, will open try-on modal for user to upload photo."
-            },
-            "user_message": {
-                "type": "string",
-                "description": "Optional message about how the user wants to see the item (e.g., 'show me in casual setting')"
+                "description": "Base64 encoded user image for virtual try-on (optional - if not provided, opens try-on modal)"
             }
         },
         "required": ["product_id"],
@@ -255,339 +270,366 @@ _virtual_try_on_schema = {
     }
 }
 
+
+def _validate_product_data(product: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate and normalize product data."""
+    return {
+        "id": product.get("id", "unknown_id"),
+        "title": product.get("title", ""),
+        "description": product.get("description", ""),
+        "brand": product.get("brand", ""),
+        "category": product.get("category", ""),
+        "price": product.get("price", 0.0),
+        "sale_price": product.get("sale_price"),
+        "on_sale": product.get("on_sale", False),
+        "colors": product.get("colors", []),
+        "sizes": product.get("sizes", []),
+        "materials": product.get("materials", []),
+        "style_tags": product.get("style_tags", []),
+        "ratings": product.get("ratings", {}),
+        "images": product.get("images", []),
+        "availability": product.get("availability", "")
+    }
+
+
 async def _search_tool(
-    search_manager, 
-    image_service,
-    args: Any
+    search_manager: SearchManager,
+    image_service: Optional[Any],
+    args: Dict[str, Any]
 ) -> ToolResult:
-    query = args['query']
-    filters = args.get('filters', {})
+    """
+    Search for clothing items with proper error handling.
 
-    print(f"🔍 SEARCH: Looking for '{query}' with filters: {filters}")
-    
-    # Use filters if provided, otherwise just do vector search
-    if filters:
-        results = await search_manager.search_with_vector_and_filters(
-            text_query=query,
-            k=10,
-            brand=filters.get('brand'),
-            category=filters.get('category'),
-            gender=filters.get('gender'),
-            max_price=filters.get('max_price'),
-            min_price=filters.get('min_price'),
-            color=filters.get('color'),
-            size=filters.get('size'),
-            material=filters.get('material'),
-            on_sale=filters.get('on_sale')
-        )
-    else:
-        results = await search_manager.search_by_embedding(query, k=10)
+    Args:
+        search_manager: Search manager instance
+        image_service: Image service instance (optional)
+        args: Search arguments containing query and filters
 
-    products = []
-    for r in results:
-        product = {
-            "id": r.get("id", "unknown_id"),
-            "title": r.get("title", ""),
-            "description": r.get("description", ""),
-            "brand": r.get("brand", ""),
-            "category": r.get("category", ""),
-            "price": r.get("price", 0.0),
-            "sale_price": r.get("sale_price"),
-            "on_sale": r.get("on_sale", False),
-            "colors": r.get("colors", []),
-            "sizes": r.get("sizes", []),
-            "materials": r.get("materials", []),
-            "style_tags": r.get("style_tags", []),
-            "ratings": r.get("ratings", {}),
-            "images": r.get("images", []),
-            "availability": r.get("availability", "")
-        }
-        
-        # Enhance product with image URLs if image_service is available
-        if image_service:
-            product = image_service.enhance_product_with_images(product)
-        
-        products.append(product)
-
-    # Log the product IDs that are available for switching
-    product_ids = [p['id'] for p in products]
-    print(f"📦 SEARCH RESULTS: Found {len(products)} products: {product_ids}")
-
-    return ToolResult({"products": products}, ToolResultDirection.TO_CLIENT)
-
-
-async def _get_product_details_tool(
-    args: Any
-) -> ToolResult:
-    product_id = args['product_id']
-    print(f"🔄 PRODUCT SWITCH: User asked for details on product {product_id}")
-
-    # Return the product ID in the format that triggers frontend highlighting
-    result = {"id": product_id}
-    print(f"✅ TOOL RESPONSE: Switching main view to product {product_id}")
-    return ToolResult(result, ToolResultDirection.TO_CLIENT)
-
-async def _add_to_cart_tool( 
-    args: Any
-) -> ToolResult:
-    return ToolResult({
-        "action": "add_to_cart",
-        "product_id": args['product_id'],
-        "size": args['size'],
-        "color": args['color'],
-        "quantity": args.get('quantity', 1)
-    }, ToolResultDirection.TO_CLIENT)
-
-async def _manage_wishlist_tool(args: Any) -> ToolResult:
-    product_id = args['product_id']
-    action = args['action']
-
-    print(f"💖 WISHLIST ACTION: {action} product {product_id}")
-
-    # Return the product ID in the format frontend expects for favorites
-    result = {"favorite_id": product_id}
-    print(f"✅ WISHLIST RESPONSE: {result}")
-
-    return ToolResult(result, ToolResultDirection.TO_CLIENT)
-
-
-async def _navigate_page_tool(args: Any) -> ToolResult:
-    # Return the requested page to navigate to
-    return ToolResult({"navigate_to": args['page']}, ToolResultDirection.TO_CLIENT)
-
-async def _get_recommendations_tool(args: Any) -> ToolResult:
-    return ToolResult({
-        "action": "get_recommendations",
-        "based_on_product_id": args.get('based_on_product_id'),
-        "style_preference": args.get('style_preference'),
-        "max_price": args.get('max_price')
-    }, ToolResultDirection.TO_CLIENT)
-
-async def _update_style_preferences_tool(args: Any) -> ToolResult:
-    return ToolResult({
-        "action": "update_style_preferences",
-        "preferences": args
-    }, ToolResultDirection.TO_CLIENT)
-
-async def _virtual_try_on_tool(
-    search_manager,
-    image_service,
-    args: Any
-) -> ToolResult:
-    product_id = args['product_id']
-    person_image_base64 = args.get('person_image_base64', None)
-    user_message = args.get('user_message', '')
-
-    print(f"🎬 === VIRTUAL TRY-ON STARTED ===")
-    print(f"👗 Product ID: {product_id}")
-    print(f"📸 Person image provided: {person_image_base64 is not None}")
-    if person_image_base64:
-        print(f"📸 Person image data length: {len(person_image_base64)} characters")
-    print(f"💬 User message: {user_message}")
-
+    Returns:
+        ToolResult with search results
+    """
     try:
-        # Step 1: Get product details for enhanced prompting
-        print(f"🔍 Step 1: Searching for product {product_id}")
-        results = await search_manager.search_by_filters()
-        print(f"📋 Found {len(results)} total products in database")
+        query = args.get('query', '')
+        filters = args.get('filters', {})
 
-        product_info = None
-        product_result = None
+        if not query:
+            logger.warning("Empty search query provided")
+            return ToolResult({"error": "Search query is required"}, ToolResultDirection.TO_CLIENT)
 
-        # Find the specific product
-        for i, result in enumerate(results):
-            if result.get("id") == product_id:
-                product_info = {
-                    "title": result.get("title", ""),
-                    "category": result.get("category", ""),
-                    "materials": result.get("materials", []),
-                    "colors": result.get("colors", []),
-                    "brand": result.get("brand", "")
-                }
-                product_result = result
-                print(f"✅ Found product at index {i}: {product_info['title']}")
-                break
+        logger.info(f"Performing search for: '{query}' with filters: {filters}")
 
-        if not product_info:
-            print(f"❌ ERROR: Product {product_id} not found in {len(results)} products")
-            # Log first few product IDs for debugging
-            sample_ids = [r.get("id", "no-id") for r in results[:5]]
-            print(f"🔍 Sample product IDs: {sample_ids}")
-
-            return ToolResult({
-                "action": "virtual_try_on_error",
-                "error": f"Product {product_id} not found in catalog"
-            }, ToolResultDirection.TO_CLIENT)
-
-        # Step 2: Handle person image
-        print(f"🧑 Step 2: Processing person image")
-
-        # If no person image provided, open the try-on modal
-        if not person_image_base64:
-            print(f"📱 No person image provided - opening try-on modal")
-            return ToolResult({
-                "action": "open_virtual_try_on_modal",
-                "product_id": product_id,
-                "product_info": product_info,
-                "message": f"I'll open the virtual try-on for {product_info.get('title', 'this item')}. Please upload your photo to see how it looks on you!"
-            }, ToolResultDirection.TO_CLIENT)
-
-        try:
-            person_image_bytes = base64.b64decode(person_image_base64)
-            print(f"✅ Successfully decoded person image: {len(person_image_bytes)} bytes")
-        except Exception as e:
-            print(f"❌ ERROR: Failed to decode person image: {e}")
-            return ToolResult({
-                "action": "virtual_try_on_error",
-                "error": "Invalid person image data"
-            }, ToolResultDirection.TO_CLIENT)
-
-        # Step 3: Handle clothing image
-        print(f"👔 Step 3: Processing clothing image")
-        clothing_image_bytes = None
-
-        if product_result and product_result.get("images"):
-            product_images = product_result["images"]
-            print(f"📸 Product has {len(product_images)} images: {product_images[:3]}")
-
-            # Try to fetch the first product image
-            if image_service and len(product_images) > 0:
-                print(f"🔗 Attempting to fetch clothing image via image_service")
-                try:
-                    # Get the first image URL
-                    image_urls = image_service.get_image_urls(product_id, [product_images[0]])
-                    if image_urls and len(image_urls) > 0:
-                        image_url = image_urls[0]
-                        print(f"🌐 Got image URL: {image_url}")
-
-                        # Fetch the actual image data
-                        try:
-                            clothing_image_bytes = await fetch_image_from_url(image_url)
-                            print(f"✅ Successfully fetched clothing image: {len(clothing_image_bytes)} bytes")
-                        except Exception as fetch_error:
-                            print(f"❌ Failed to fetch clothing image: {fetch_error}")
-                    else:
-                        print(f"❌ No image URLs generated for product {product_id}")
-                except Exception as img_error:
-                    print(f"❌ Error getting image URL: {img_error}")
-
-        if not clothing_image_bytes:
-            print(f"⚠️ No clothing image available - returning request for manual upload")
-            return ToolResult({
-                "action": "virtual_try_on_request",
-                "product_id": product_id,
-                "product_info": product_info,
-                "needs_clothing_image": True,
-                "message": f"I need the clothing image for {product_info.get('title', 'this item')} to generate your virtual try-on. The product image couldn't be automatically fetched."
-            }, ToolResultDirection.TO_CLIENT)
-
-        # Step 4: Generate virtual try-on (when we have both images)
-        print(f"🎨 Step 4: Generating virtual try-on with Vertex AI")
-        try:
-            success, result_image, error_msg = await virtual_tryon_service.generate_virtual_tryon(
-                person_image_bytes,
-                clothing_image_bytes,
-                product_info
+        # Use filters if provided, otherwise just do vector search
+        if filters:
+            results = await search_manager.search_with_vector_and_filters(
+                text_query=query,
+                k=10,
+                brand=filters.get('brand'),
+                category=filters.get('category'),
+                gender=filters.get('gender'),
+                max_price=filters.get('max_price'),
+                min_price=filters.get('min_price'),
+                color=filters.get('color'),
+                size=filters.get('size'),
+                material=filters.get('material'),
+                on_sale=filters.get('on_sale')
             )
+        else:
+            results = await search_manager.search_by_embedding(query, k=10)
 
-            if success and result_image:
-                print(f"🎉 Virtual try-on generation successful: {len(result_image)} bytes")
+        products = []
+        for r in results:
+            product = _validate_product_data(r)
 
-                # Step 5: Save result to local storage
-                result_filename = f"tryon_{product_id}_{int(time.time())}.png"
+            # Enhance product with image URLs if image_service is available
+            if image_service:
+                try:
+                    product = image_service.enhance_product_with_images(product)
+                except Exception as e:
+                    logger.warning(f"Failed to enhance product {product['id']} with images: {e}")
 
-                # Create results directory if it doesn't exist
-                from pathlib import Path
-                results_dir = Path("virtual_tryon_results")
-                results_dir.mkdir(exist_ok=True)
+            products.append(product)
 
-                # Save the image file
-                result_path = results_dir / result_filename
-                with open(result_path, "wb") as f:
-                    f.write(result_image)
+        # Log the search results
+        product_ids = [p['id'] for p in products]
+        logger.info(f"Search completed: Found {len(products)} products: {product_ids}")
 
-                print(f"💾 Saved result image: {result_path} ({len(result_image)} bytes)")
-
-                # Return the URL to access the saved image
-                result_url = f"/api/virtual-tryon-results/{result_filename}"
-
-                return ToolResult({
-                    "action": "virtual_try_on_result",
-                    "product_id": product_id,
-                    "image_url": result_url,
-                    "timestamp": datetime.now().isoformat()
-                }, ToolResultDirection.TO_CLIENT)
-            else:
-                print(f"❌ Virtual try-on generation failed: {error_msg}")
-                return ToolResult({
-                    "action": "virtual_try_on_error",
-                    "error": f"Generation failed: {error_msg}"
-                }, ToolResultDirection.TO_CLIENT)
-
-        except Exception as gen_error:
-            print(f"❌ Exception during generation: {gen_error}")
-            return ToolResult({
-                "action": "virtual_try_on_error",
-                "error": f"Generation exception: {str(gen_error)}"
-            }, ToolResultDirection.TO_CLIENT)
+        return ToolResult({"products": products}, ToolResultDirection.TO_CLIENT)
 
     except Exception as e:
-        print(f"❌ VIRTUAL TRY-ON FAILED with exception: {e}")
-        import traceback
-        print(f"📚 Full traceback: {traceback.format_exc()}")
-        return ToolResult({
-            "action": "virtual_try_on_error",
-            "error": f"Virtual try-on failed: {str(e)}"
-        }, ToolResultDirection.TO_CLIENT)
-    finally:
-        print(f"🎬 === VIRTUAL TRY-ON ENDED ===")
+        logger.error(f"Search tool failed: {e}")
+        return ToolResult({"error": f"Search failed: {str(e)}"}, ToolResultDirection.TO_CLIENT)
 
 
-def attach_rag_tools(rtmt: RTMiddleTier,
-    credentials: AzureKeyCredential | DefaultAzureCredential,
-    search_manager: SearchManager, 
-    image_service = None
-    ) -> None:
-    
-    if not isinstance(credentials, AzureKeyCredential):
-        credentials.get_token("https://search.azure.com/.default") # warm this up before we start getting requests
+async def _get_product_details_tool(args: Dict[str, Any]) -> ToolResult:
+    """Get detailed information about a specific product."""
+    try:
+        product_id = args.get('product_id')
+        if not product_id:
+            logger.warning("Product ID not provided for get_product_details")
+            return ToolResult({"error": "Product ID is required"}, ToolResultDirection.TO_CLIENT)
 
-    rtmt.tools["search"] = Tool(
-        schema=_search_tool_schema, 
-        target=lambda args: _search_tool(search_manager, image_service, args)
-    )
+        logger.info(f"Switching main view to product: {product_id}")
 
-    rtmt.tools["get_product_details"] = Tool(
-        schema=_get_product_details_schema, 
-        target=lambda args: _get_product_details_tool(args)
-    )
+        # Return the product ID in the format that triggers frontend highlighting
+        result = {"id": product_id}
 
-    rtmt.tools["add_to_cart"] = Tool(
-        schema=_add_to_cart_schema, 
-        target=lambda args: _add_to_cart_tool(args)
-    )
+        return ToolResult(result, ToolResultDirection.TO_CLIENT)
 
-    rtmt.tools["manage_wishlist"] = Tool(
-        schema=_manage_wishlist_schema,
-        target=lambda args: _manage_wishlist_tool(args)
-    )
+    except Exception as e:
+        logger.error(f"Get product details tool failed: {e}")
+        return ToolResult({"error": f"Failed to get product details: {str(e)}"}, ToolResultDirection.TO_CLIENT)
 
-    rtmt.tools["navigate_page"] = Tool(
-        schema=_navigate_page_schema,
-        target=lambda args: _navigate_page_tool(args)
-    )
 
-    rtmt.tools["get_recommendations"] = Tool(
-        schema=_get_recommendations_schema,
-        target=lambda args: _get_recommendations_tool(args)
-    )
+async def _add_to_cart_tool(args: Dict[str, Any]) -> ToolResult:
+    """Add item to shopping cart with validation."""
+    try:
+        product_id = args.get('product_id')
+        size = args.get('size')
+        color = args.get('color')
+        quantity = args.get('quantity', 1)
 
-    rtmt.tools["update_style_preferences"] = Tool(
-        schema=_update_style_preferences_schema,
-        target=lambda args: _update_style_preferences_tool(args)
-    )
+        if not all([product_id, size, color]):
+            logger.warning("Missing required parameters for add_to_cart")
+            return ToolResult({"error": "Product ID, size, and color are required"}, ToolResultDirection.TO_CLIENT)
 
-    rtmt.tools["virtual_try_on"] = Tool(
-        schema=_virtual_try_on_schema,
-        target=lambda args: _virtual_try_on_tool(search_manager, image_service, args)
-    )
+        logger.info(f"Adding to cart: {product_id} (size: {size}, color: {color}, qty: {quantity})")
+
+        result = {
+            "action": "add_to_cart",
+            "product_id": product_id,
+            "size": size,
+            "color": color,
+            "quantity": quantity,
+            "timestamp": datetime.now().isoformat()
+        }
+
+        return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+    except Exception as e:
+        logger.error(f"Add to cart tool failed: {e}")
+        return ToolResult({"error": f"Failed to add to cart: {str(e)}"}, ToolResultDirection.TO_CLIENT)
+
+
+async def _manage_wishlist_tool(args: Dict[str, Any]) -> ToolResult:
+    """Manage wishlist items with validation."""
+    try:
+        product_id = args.get('product_id')
+        action = args.get('action')
+
+        if not all([product_id, action]):
+            logger.warning("Missing required parameters for manage_wishlist")
+            return ToolResult({"error": "Product ID and action are required"}, ToolResultDirection.TO_CLIENT)
+
+        if action not in ['add', 'remove']:
+            logger.warning(f"Invalid wishlist action: {action}")
+            return ToolResult({"error": "Action must be 'add' or 'remove'"}, ToolResultDirection.TO_CLIENT)
+
+        logger.info(f"Managing wishlist: {action} product {product_id}")
+
+        # Return the product ID in the format frontend expects for favorites
+        result = {"favorite_id": product_id}
+
+        return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+    except Exception as e:
+        logger.error(f"Manage wishlist tool failed: {e}")
+        return ToolResult({"error": f"Failed to manage wishlist: {str(e)}"}, ToolResultDirection.TO_CLIENT)
+
+
+async def _navigate_page_tool(args: Dict[str, Any]) -> ToolResult:
+    """Navigate to different pages with validation."""
+    try:
+        destination = args.get('destination')
+        if not destination:
+            logger.warning("Destination not provided for navigate_page")
+            return ToolResult({"error": "Destination is required"}, ToolResultDirection.TO_CLIENT)
+
+        # Map common aliases to frontend-expected page names
+        page_mapping = {
+            "home": "main",
+            "wishlist": "favorites",
+            "main": "main",
+            "favorites": "favorites",
+            "cart": "cart",
+            "messages": "messages"
+        }
+
+        mapped_destination = page_mapping.get(destination, destination)
+        logger.info(f"Navigating to: {destination} -> {mapped_destination}")
+
+        # Return the requested page to navigate to in the format frontend expects
+        result = {"navigate_to": mapped_destination}
+
+        return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+    except Exception as e:
+        logger.error(f"Navigate page tool failed: {e}")
+        return ToolResult({"error": f"Failed to navigate: {str(e)}"}, ToolResultDirection.TO_CLIENT)
+
+
+async def _get_recommendations_tool(args: Dict[str, Any]) -> ToolResult:
+    """Get product recommendations with validation."""
+    try:
+        based_on_product_id = args.get('based_on_product_id')
+        category = args.get('category')
+        limit = args.get('limit', 5)
+
+        logger.info(f"Getting recommendations (product: {based_on_product_id}, category: {category}, limit: {limit})")
+
+        result = {
+            "action": "get_recommendations",
+            "based_on_product_id": based_on_product_id,
+            "category": category,
+            "limit": limit,
+            "timestamp": datetime.now().isoformat()
+        }
+
+        return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+    except Exception as e:
+        logger.error(f"Get recommendations tool failed: {e}")
+        return ToolResult({"error": f"Failed to get recommendations: {str(e)}"}, ToolResultDirection.TO_CLIENT)
+
+
+async def _update_style_preferences_tool(args: Dict[str, Any]) -> ToolResult:
+    """Update user style preferences with validation."""
+    try:
+        logger.info(f"Updating style preferences: {args}")
+
+        result = {
+            "action": "update_style_preferences",
+            "preferences": args,
+            "timestamp": datetime.now().isoformat()
+        }
+
+        return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+    except Exception as e:
+        logger.error(f"Update style preferences tool failed: {e}")
+        return ToolResult({"error": f"Failed to update preferences: {str(e)}"}, ToolResultDirection.TO_CLIENT)
+
+
+async def _virtual_try_on_tool(args: Dict[str, Any]) -> ToolResult:
+    """
+    Virtual try-on tool with proper error handling.
+
+    Args:
+        args: Arguments containing product_id and optional user_image
+
+    Returns:
+        ToolResult with try-on results or error
+    """
+    try:
+        product_id = args.get('product_id')
+        user_image_b64 = args.get('user_image')
+
+        if not product_id:
+            logger.warning("Product ID not provided for virtual_try_on")
+            return ToolResult({"error": "Product ID is required"}, ToolResultDirection.TO_CLIENT)
+
+        logger.info(f"Starting virtual try-on for product: {product_id}")
+
+        if not user_image_b64:
+            # No user image provided, return action to open upload modal
+            logger.info("No user image provided, opening try-on modal")
+            result = {
+                "action": "open_virtual_try_on_modal",
+                "product_id": product_id,
+                "message": f"I'll open the virtual try-on for this item. Please upload your photo to see how it looks on you!"
+            }
+            return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+        try:
+            # Decode base64 image
+            user_image_data = base64.b64decode(user_image_b64)
+            logger.info(f"Decoded user image: {len(user_image_data)} bytes")
+        except Exception as e:
+            logger.error(f"Failed to decode user image: {e}")
+            raise VirtualTryOnError(f"Invalid image data: {e}")
+
+        # Process virtual try-on
+        try:
+            if virtual_tryon_service is None:
+                logger.error("Virtual try-on service not available")
+                raise VirtualTryOnError("Virtual try-on service is not configured")
+
+            tryon_result = await virtual_tryon_service.process_tryon(
+                product_id=product_id,
+                user_image=user_image_data
+            )
+
+            logger.info(f"Virtual try-on completed for product {product_id}")
+
+            result = {
+                "action": "virtual_try_on_result",
+                "product_id": product_id,
+                "tryon_image": tryon_result.get('tryon_image_b64'),
+                "confidence": tryon_result.get('confidence'),
+                "timestamp": datetime.now().isoformat()
+            }
+
+            return ToolResult(result, ToolResultDirection.TO_CLIENT)
+
+        except Exception as e:
+            logger.error(f"Virtual try-on processing failed: {e}")
+            raise VirtualTryOnError(f"Try-on processing failed: {e}")
+
+    except VirtualTryOnError as e:
+        logger.error(f"Virtual try-on tool failed: {e}")
+        return ToolResult({"error": str(e)}, ToolResultDirection.TO_CLIENT)
+    except Exception as e:
+        logger.error(f"Unexpected error in virtual try-on tool: {e}")
+        return ToolResult({"error": f"Virtual try-on failed: {str(e)}"}, ToolResultDirection.TO_CLIENT)
+
+
+def attach_rag_tools(
+    rtmt: RTMiddleTier,
+    credentials: Union[AzureKeyCredential, DefaultAzureCredential],
+    search_manager: SearchManager,
+    image_service: Optional[Any] = None
+) -> None:
+    """
+    Attach RAG tools to the real-time middleware tier with proper error handling.
+
+    Args:
+        rtmt: Real-time middleware tier instance
+        credentials: Azure credentials
+        search_manager: Search manager instance
+        image_service: Image service instance (optional)
+    """
+    try:
+        logger.info("Attaching RAG tools to RTMT")
+
+        # Warm up credentials if needed
+        if not isinstance(credentials, AzureKeyCredential):
+            try:
+                credentials.get_token("https://search.azure.com/.default")
+                logger.debug("Azure credentials warmed up successfully")
+            except Exception as e:
+                logger.warning(f"Failed to warm up credentials: {e}")
+
+        # Attach tools with error handling for each
+        tools_to_attach = [
+            ("search", _search_tool_schema, lambda args: _search_tool(search_manager, image_service, args)),
+            ("get_product_details", _get_product_details_schema, _get_product_details_tool),
+            ("add_to_cart", _add_to_cart_schema, _add_to_cart_tool),
+            ("manage_wishlist", _manage_wishlist_schema, _manage_wishlist_tool),
+            ("navigate_page", _navigate_page_schema, _navigate_page_tool),
+            ("get_recommendations", _get_recommendations_schema, _get_recommendations_tool),
+            ("update_style_preferences", _update_style_preferences_schema, _update_style_preferences_tool),
+            ("virtual_try_on", _virtual_try_on_schema, _virtual_try_on_tool),
+        ]
+
+        for tool_name, schema, target_func in tools_to_attach:
+            try:
+                rtmt.tools[tool_name] = Tool(schema=schema, target=target_func)
+                logger.debug(f"Successfully attached tool: {tool_name}")
+            except Exception as e:
+                logger.error(f"Failed to attach tool {tool_name}: {e}")
+                raise
+
+        logger.info(f"Successfully attached {len(tools_to_attach)} RAG tools to RTMT")
+
+    except Exception as e:
+        logger.error(f"Failed to attach RAG tools: {e}")
+        raise

@@ -10,10 +10,11 @@ interface ProductCardProps {
     highlight?: boolean;
     isFavorite?: boolean;
     onAddToCart?: (listingId: string) => void;
+    onToggleFavorite?: (listingId: string) => void;
     onTryOn?: (listingId: string) => void;
 }
 
-export default function ListingCard({ listing, highlight = false, isFavorite = false, onAddToCart, onTryOn }: ProductCardProps) {
+export default function ListingCard({ listing, highlight = false, isFavorite = false, onAddToCart, onToggleFavorite, onTryOn }: ProductCardProps) {
     const { currentPrice, hasDiscount, originalPrice } = calculatePricing(
         listing.price, 
         listing.sale_price, 
@@ -44,12 +45,13 @@ export default function ListingCard({ listing, highlight = false, isFavorite = f
                         SALE
                     </div>
                 )}
-                <Heart 
+                <Heart
+                    onClick={() => onToggleFavorite?.(listing.id)}
                     className={`absolute top-2 left-2 h-5 w-5 cursor-pointer transition-all duration-200 hover:scale-110 ${
-                        isFavorite 
-                            ? "fill-current text-pink-400 hover:text-pink-300" 
+                        isFavorite
+                            ? "fill-current text-pink-400 hover:text-pink-300"
                             : "text-gray-300 hover:text-pink-400"
-                    }`} 
+                    }`}
                 />
             </div>
 
