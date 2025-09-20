@@ -31,6 +31,9 @@ app/backend/
 │   ├── search_service.py          # Search service layer
 │   ├── virtual_tryon_service.py   # Virtual try-on service
 │   └── virtual_tryon_endpoint.py  # Virtual try-on API endpoints
+├── prompts/
+│   ├── __init__.py
+│   └── system_messages.py         # AI prompts and templates
 ├── exceptions/
 │   ├── __init__.py          # Custom exception hierarchy
 ├── image_tools/             # Image processing utilities
