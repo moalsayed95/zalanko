@@ -5,10 +5,9 @@ This directory contains tests for the Google Vertex AI Gemini virtual try-on fun
 ## Directory Structure
 
 ```
-test_gemini/
+tests/virtual_tryon_tests/
 ├── README.md                           # This documentation file
 ├── vertex_ai_tryon_test.py            # ✅ Working virtual try-on implementation
-├── simple_vertex_test.py              # Basic connectivity test
 └── data/                              # Test images and results
     ├── mo.jpg                         # Test person image (868KB)
     ├── item.png                       # Test clothing item (2.7MB)
@@ -48,14 +47,8 @@ pip install --upgrade google-genai pillow python-dotenv
 
 ### Complete Virtual Try-On Test
 ```bash
-cd test_gemini
+cd tests/virtual_tryon_tests
 python vertex_ai_tryon_test.py
-```
-
-### Basic Connectivity Test
-```bash
-cd test_gemini
-python simple_vertex_test.py
 ```
 
 ## Technical Implementation
@@ -190,7 +183,7 @@ The virtual try-on feature is **FULLY OPERATIONAL** in the Zalanko platform:
 - **Cross-Platform**: Works on desktop and mobile browsers
 
 ### 🏗️ **Technical Architecture**:
-- **Backend**: `virtual_tryon_service.py` + `virtual_tryon_endpoint.py`
+- **Backend**: `services/virtual_tryon_service.py` + `services/virtual_tryon_endpoint.py`
 - **RAG Integration**: `virtual_try_on` tool in `ragtools.py`
 - **Frontend**: `VirtualTryOn.tsx` modal component
 - **API Endpoints**: `/api/virtual-tryon` + `/api/virtual-tryon-results/{filename}`

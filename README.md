@@ -232,7 +232,7 @@ docker run -p 8000:8000 zalanko
 ### Technical Implementation
 ```python
 # Virtual try-on service integration
-from virtual_tryon_service import virtual_tryon_service
+from services.virtual_tryon_service import virtual_tryon_service
 
 # Generate virtual try-on
 success, result_image, error = await virtual_tryon_service.generate_virtual_tryon(
