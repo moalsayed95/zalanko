@@ -244,7 +244,7 @@ if __name__ == "__main__":
     asyncio.run(index_manager.create_index_if_not_exists())
     # read the clothing documents
     import json
-    with open("data/clothing_data.json", "r") as f:
+    with open("../../data/clothing_data.json", "r") as f:
         documents = json.load(f)
 
     asyncio.run(index_manager.upload_documents(documents))

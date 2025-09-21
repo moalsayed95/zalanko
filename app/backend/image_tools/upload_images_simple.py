@@ -40,63 +40,75 @@ def upload_with_azure_cli():
     
     print("✅ Azure CLI authenticated")
     
-    # Find sample images
-    images_dir = Path("sample_images")
-    sample_files = list(images_dir.glob("*.jpg"))
-    
-    if not sample_files:
+    # Find real product images
+    images_dir = Path("../../../data/images")  # Corrected path
+    product_images = list(images_dir.glob("*.png"))
+
+    if not product_images:
         print(f"❌ No images found in {images_dir}")
         return False
-    
-    print(f"\n📁 Found {len(sample_files)} sample images")
-    
-    # Load product data for first few products
-    data_file = Path("../../data/clothing_data.json")
+
+    print(f"\n📁 Found {len(product_images)} product images")
+
+    # Load product data to get all products
+    data_file = Path("../../../data/clothing_data.json")
     if data_file.exists():
         with open(data_file, 'r') as f:
             products = json.load(f)
-            product_ids = [p["id"] for p in products[:5]]  # First 5 products
+            product_ids = [p["id"] for p in products]  # All products
     else:
-        product_ids = ["CLO001", "CLO002", "CLO003", "CLO004", "CLO005"]
-    
+        # Extract product IDs from image filenames
+        product_ids = [img.stem for img in product_images]
+
     print(f"📦 Will upload images for {len(product_ids)} products")
+    print(f"📸 Available images: {[img.name for img in product_images]}")
     
     uploaded_count = 0
     
     # Upload images for each product
     for i, product_id in enumerate(product_ids):
         print(f"\n📤 Product {product_id} ({i+1}/{len(product_ids)}):")
-        
-        # Upload 2-3 images per product
-        for j, img_file in enumerate(sample_files[:3]):  # Use first 3 images
-            blob_name = f"{product_id}/{img_file.name}"
-            
-            try:
-                # Azure CLI upload command with AD authentication
-                cmd = [
-                    'az', 'storage', 'blob', 'upload',
-                    '--account-name', storage_account,
-                    '--container-name', container_name,
-                    '--name', blob_name,
-                    '--file', str(img_file),
-                    '--overwrite', 'true',
-                    '--auth-mode', 'login'
-                ]
-                
-                print(f"  Uploading {blob_name}...")
-                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-                
-                blob_url = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
-                print(f"    ✅ {blob_url}")
-                uploaded_count += 1
-                
-            except subprocess.CalledProcessError as e:
-                print(f"    ❌ Failed: {e.stderr}")
-                continue
+
+        # Find matching image file for this product
+        matching_image = None
+        for img_file in product_images:
+            if img_file.stem == product_id:
+                matching_image = img_file
+                break
+
+        if not matching_image:
+            print(f"  ⚠️ No image found for {product_id}")
+            continue
+
+        # Upload the product image directly (not in subfolder for simpler access)
+        blob_name = f"{product_id}.png"
+
+        try:
+            # Azure CLI upload command with AD authentication
+            cmd = [
+                'az', 'storage', 'blob', 'upload',
+                '--account-name', storage_account,
+                '--container-name', container_name,
+                '--name', blob_name,
+                '--file', str(matching_image),
+                '--overwrite', 'true',
+                '--auth-mode', 'login'
+            ]
+
+            print(f"  Uploading {blob_name}...")
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            blob_url = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
+            print(f"    ✅ {blob_url}")
+            uploaded_count += 1
+
+        except subprocess.CalledProcessError as e:
+            print(f"    ❌ Failed: {e.stderr}")
+            continue
     
     print(f"\n🎉 Upload complete! {uploaded_count} images uploaded.")
     print(f"\n🔗 Test URL example:")
-    print(f"https://{storage_account}.blob.core.windows.net/{container_name}/CLO001/fashion_model_1.jpg")
+    print(f"https://{storage_account}.blob.core.windows.net/{container_name}/CLO001.png")
     
     return True
 

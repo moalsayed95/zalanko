@@ -12,9 +12,10 @@ interface ProductCardProps {
     onAddToCart?: (listingId: string) => void;
     onToggleFavorite?: (listingId: string) => void;
     onTryOn?: (listingId: string) => void;
+    onSelect?: (listingId: string) => void;
 }
 
-export default function ListingCard({ listing, highlight = false, isFavorite = false, onAddToCart, onToggleFavorite, onTryOn }: ProductCardProps) {
+export default function ListingCard({ listing, highlight = false, isFavorite = false, onAddToCart, onToggleFavorite, onTryOn, onSelect }: ProductCardProps) {
     const { currentPrice, hasDiscount, originalPrice } = calculatePricing(
         listing.price, 
         listing.sale_price, 
@@ -31,7 +32,10 @@ export default function ListingCard({ listing, highlight = false, isFavorite = f
     };
 
     return (
-        <Card className={`w-full overflow-hidden border border-gray-700 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-gray-800 rounded-xl ${highlight ? "ring-2 ring-purple-500 ring-opacity-50" : ""}`}>
+        <Card
+            className={`w-full overflow-hidden border border-gray-700 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-gray-800 rounded-xl cursor-pointer ${highlight ? "ring-2 ring-purple-500 ring-opacity-50" : ""}`}
+            onClick={() => onSelect?.(listing.id)}
+        >
             {/* Product Image Section */}
             <div className="relative w-full h-48 overflow-hidden group">
                 <ProductImage
@@ -46,7 +50,10 @@ export default function ListingCard({ listing, highlight = false, isFavorite = f
                     </div>
                 )}
                 <Heart
-                    onClick={() => onToggleFavorite?.(listing.id)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite?.(listing.id);
+                    }}
                     className={`absolute top-2 left-2 h-5 w-5 cursor-pointer transition-all duration-200 hover:scale-110 ${
                         isFavorite
                             ? "fill-current text-pink-400 hover:text-pink-300"
@@ -115,14 +122,20 @@ export default function ListingCard({ listing, highlight = false, isFavorite = f
             <CardFooter className="px-4 py-3 bg-gray-700/30 border-t border-gray-700">
                 <div className="flex gap-2 w-full">
                     <button
-                        onClick={() => onTryOn?.(listing.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onTryOn?.(listing.id);
+                        }}
                         className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-2 rounded-lg font-semibold text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2"
                     >
                         <Camera className="w-4 h-4" />
                         Try On
                     </button>
                     <button
-                        onClick={() => onAddToCart?.(listing.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onAddToCart?.(listing.id);
+                        }}
                         className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-2 rounded-lg font-semibold text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2"
                     >
                         <ShoppingCart className="w-4 h-4" />

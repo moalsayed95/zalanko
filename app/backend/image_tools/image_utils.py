@@ -99,7 +99,7 @@ class ImageService:
 
     async def get_product_image(self, product_id: str) -> Optional[bytes]:
         """
-        Fetch the actual image bytes for a product for virtual try-on.
+        Fetch the actual image bytes for a product for virtual try-on from Azure Blob Storage.
 
         Args:
             product_id: The product ID to fetch image for
@@ -108,41 +108,27 @@ class ImageService:
             Image bytes if found, None otherwise
         """
         try:
-            # Handle default products with specific image mappings
-            default_product_images = {
-                "CLO_DEFAULT_001": "placeholder_tshirt.jpg",
-                "CLO_DEFAULT_002": "placeholder_jacket.jpg",
-                "CLO_DEFAULT_003": "placeholder_dress.jpg",
-                "CLO_DEFAULT_004": "placeholder_sneakers.jpg",
-                "CLO_DEFAULT_005": "placeholder_blazer.jpg"
-            }
+            # Use local image proxy service for authenticated access
+            image_filename = f"{product_id}.png"
+            backend_base = os.getenv("BACKEND_URL", "http://localhost:8765")
+            proxy_url = f"{backend_base}/api/images/{product_id}/{image_filename}"
 
-            # Determine image filename
-            if product_id in default_product_images:
-                image_filename = default_product_images[product_id]
-            else:
-                # For regular products, assume ID-based naming
-                image_filename = f"{product_id}.jpg"
-
-            # Try to fetch the image
-            image_url = f"{self.base_url}/{image_filename}"
+            print(f"🔍 Attempting to fetch image via proxy: {proxy_url}")
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(image_url) as response:
+                async with session.get(proxy_url) as response:
                     if response.status == 200:
-                        return await response.read()
+                        image_data = await response.read()
+                        print(f"✅ Successfully fetched image via proxy: {len(image_data)} bytes")
+                        return image_data
+                    else:
+                        print(f"❌ Failed to fetch image via proxy: HTTP {response.status}")
 
-                # If specific image not found, try fallbacks
-                fallback_images = ["fashion_model_1.jpg", "fashion_model_2.jpg", "fashion_accessories.jpg"]
-                for fallback in fallback_images:
-                    fallback_url = f"{self.base_url}/{fallback}"
-                    async with session.get(fallback_url) as alt_response:
-                        if alt_response.status == 200:
-                            return await alt_response.read()
-
+                print(f"❌ No images found for {product_id}")
                 return None
+
         except Exception as e:
-            print(f"Error fetching product image for {product_id}: {e}")
+            print(f"💥 Error fetching product image for {product_id}: {e}")
             return None
 
 

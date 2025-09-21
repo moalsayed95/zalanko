@@ -570,29 +570,26 @@ async def _virtual_try_on_tool(args: Dict[str, Any], image_service=None) -> Tool
                 logger.error("Virtual try-on service not available")
                 raise VirtualTryOnError("Virtual try-on service is not configured")
 
-            # Load the test clothing image that we know works
+            # Fetch the actual product image from blob storage
             try:
-                from pathlib import Path
-
-                # Use the working test image from the test directory
-                test_image_path = Path(__file__).parent / "tests" / "virtual_tryon_tests" / "data" / "item.png"
-
-                if test_image_path.exists():
-                    with open(test_image_path, "rb") as f:
-                        clothing_image_data = f.read()
-                    logger.info(f"Loaded test clothing image: {len(clothing_image_data)} bytes")
+                if image_service:
+                    clothing_image_data = await image_service.get_product_image(product_id)
+                    if not clothing_image_data:
+                        logger.warning(f"Could not fetch image for product {product_id} from blob storage")
+                        # Fallback to test image if blob storage fails
+                        from pathlib import Path
+                        test_image_path = Path(__file__).parent / "tests" / "virtual_tryon_tests" / "data" / "item.png"
+                        if test_image_path.exists():
+                            with open(test_image_path, "rb") as f:
+                                clothing_image_data = f.read()
+                            logger.info(f"Fallback: Using test clothing image: {len(clothing_image_data)} bytes")
+                        else:
+                            raise VirtualTryOnError(f"Product image not found for {product_id} and no fallback available")
+                    else:
+                        logger.info(f"Fetched product image from blob storage: {len(clothing_image_data)} bytes")
                 else:
-                    # Fallback: create a simple test image
-                    logger.warning("Test image not found, creating placeholder")
-                    from PIL import Image
-                    import io
-
-                    # Create a simple colored rectangle as clothing item
-                    img = Image.new('RGB', (400, 600), color='blue')
-                    buffer = io.BytesIO()
-                    img.save(buffer, format='JPEG')
-                    clothing_image_data = buffer.getvalue()
-                    logger.info(f"Created placeholder clothing image: {len(clothing_image_data)} bytes")
+                    logger.warning("Image service not available")
+                    raise VirtualTryOnError("Image service not configured")
 
                 success, result_image, error = await virtual_tryon_service.generate_virtual_tryon(
                     person_image=user_image_data,
@@ -600,8 +597,8 @@ async def _virtual_try_on_tool(args: Dict[str, Any], image_service=None) -> Tool
                     product_info={'id': product_id}
                 )
             except Exception as e:
-                logger.error(f"Failed to load clothing image: {e}")
-                raise VirtualTryOnError(f"Failed to load clothing image: {e}")
+                logger.error(f"Failed to fetch product image: {e}")
+                raise VirtualTryOnError(f"Failed to get product image: {e}")
 
             if success and result_image:
                 logger.info(f"Virtual try-on completed successfully for product {product_id}")

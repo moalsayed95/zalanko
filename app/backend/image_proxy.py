@@ -27,7 +27,7 @@ class ImageProxy:
     async def get_blob_stream(self, product_id: str, filename: str):
         """Get blob data stream with authentication."""
         try:
-            blob_name = f"{product_id}/{filename}"
+            blob_name = filename
             blob_client = self.blob_service_client.get_blob_client(
                 container=self.container_name, 
                 blob=blob_name
@@ -44,7 +44,7 @@ class ImageProxy:
             return content, content_type
             
         except Exception as e:
-            print(f"Error fetching blob {product_id}/{filename}: {e}")
+            print(f"Error fetching blob {filename}: {e}")
             return None, None
     
     async def cleanup(self):

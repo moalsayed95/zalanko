@@ -244,6 +244,7 @@ function App() {
                                                 onAddToCart={() => shoppingFeatures.handleAddToCart(listing.id)}
                                                 onToggleFavorite={() => shoppingFeatures.toggleFavorite(listing.id)}
                                                 onTryOn={() => virtualTryOn.handleTryOn(listing.id, productManagement.listings)}
+                                                onSelect={() => productManagement.highlightProduct(listing.id)}
                                             />
                                         ))}
                                     </div>
@@ -427,6 +428,7 @@ function App() {
                                         onAddToCart={() => shoppingFeatures.handleAddToCart(listing.id)}
                                         onToggleFavorite={() => shoppingFeatures.toggleFavorite(listing.id)}
                                         onTryOn={() => virtualTryOn.handleTryOn(listing.id, productManagement.listings)}
+                                        onSelect={() => productManagement.highlightProduct(listing.id)}
                                     />
                                 ))}
                             </div>
