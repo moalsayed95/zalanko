@@ -32,6 +32,17 @@ function App() {
         initialMessage?: string;
     } | undefined>();
 
+    // Initialize voice interface first to get sendStateToAI function
+    const voiceInterface = useVoiceInterface({
+        onToolResponse: (message: any) => {
+            // This will be handled by the tool response handler once it's created
+            toolResponseHandlerRef.current?.handleToolResponse(message);
+        }
+    });
+
+    // Create a ref to store the tool response handler
+    const toolResponseHandlerRef = useRef<any>();
+
     // Setup tool response handler with all hook dependencies
     const toolResponseHandler = useToolResponseHandler({
         // Product management
@@ -51,13 +62,16 @@ function App() {
         handleTryOnError: virtualTryOn.handleTryOnError,
 
         // Messages
-        setActiveContact
+        setActiveContact,
+
+        // Note: State synchronization is now handled by the AI asking the user directly
     });
 
-    // Initialize voice interface with tool response handler
-    const { isRecording, onToggleListening } = useVoiceInterface({
-        onToolResponse: toolResponseHandler.handleToolResponse
-    });
+    // Store the handler in the ref for the callback
+    toolResponseHandlerRef.current = toolResponseHandler;
+
+    // Extract voice interface properties
+    const { isRecording, onToggleListening } = voiceInterface;
 
     // Product display logic using shopping features
     const displayedListings = shoppingFeatures.page === "favorites"

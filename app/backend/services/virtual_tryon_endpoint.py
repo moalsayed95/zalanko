@@ -52,11 +52,11 @@ async def virtual_tryon_handler(request):
         # Call the virtual try-on tool directly
         args = {
             'product_id': product_id,
-            'person_image_base64': person_image_base64,
+            'user_image': person_image_base64,  # Map person_image_base64 to user_image
             'user_message': user_message
         }
 
-        result = await _virtual_try_on_tool(search_manager, image_service, args)
+        result = await _virtual_try_on_tool(args, image_service)
 
         # Convert ToolResult to JSON response
         if hasattr(result, 'text'):

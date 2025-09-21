@@ -19,6 +19,8 @@ interface ToolResponseHandlerConfig {
 
     // Messages
     setActiveContact: (contact: any) => void;
+
+    // Note: State synchronization is now handled by the AI asking the user directly
 }
 
 /**
@@ -79,6 +81,10 @@ export const useToolResponseHandler = (config: ToolResponseHandlerConfig) => {
             case "virtual_try_on_error":
                 config.handleTryOnError(result.error);
                 break;
+
+            // Note: get_application_state is now handled by the backend directly
+            // The AI will ask the user about their current state instead of trying
+            // to gather it automatically from the frontend
 
             default:
                 console.log("🤷‍♂️ Unknown tool response action:", result.action);

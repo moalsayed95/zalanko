@@ -2,6 +2,7 @@
 Image utility service for handling product image URLs and Azure Storage integration.
 """
 import os
+import aiohttp
 from typing import List, Dict, Any, Optional
 
 
@@ -90,11 +91,59 @@ class ImageService:
     def validate_storage_config(self) -> bool:
         """
         Validate that storage configuration is properly set.
-        
+
         Returns:
             True if configuration is valid
         """
         return bool(self.storage_account and self.container)
+
+    async def get_product_image(self, product_id: str) -> Optional[bytes]:
+        """
+        Fetch the actual image bytes for a product for virtual try-on.
+
+        Args:
+            product_id: The product ID to fetch image for
+
+        Returns:
+            Image bytes if found, None otherwise
+        """
+        try:
+            # Handle default products with specific image mappings
+            default_product_images = {
+                "CLO_DEFAULT_001": "placeholder_tshirt.jpg",
+                "CLO_DEFAULT_002": "placeholder_jacket.jpg",
+                "CLO_DEFAULT_003": "placeholder_dress.jpg",
+                "CLO_DEFAULT_004": "placeholder_sneakers.jpg",
+                "CLO_DEFAULT_005": "placeholder_blazer.jpg"
+            }
+
+            # Determine image filename
+            if product_id in default_product_images:
+                image_filename = default_product_images[product_id]
+            else:
+                # For regular products, assume ID-based naming
+                image_filename = f"{product_id}.jpg"
+
+            # Try to fetch the image
+            image_url = f"{self.base_url}/{image_filename}"
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(image_url) as response:
+                    if response.status == 200:
+                        return await response.read()
+
+                # If specific image not found, try fallbacks
+                fallback_images = ["fashion_model_1.jpg", "fashion_model_2.jpg", "fashion_accessories.jpg"]
+                for fallback in fallback_images:
+                    fallback_url = f"{self.base_url}/{fallback}"
+                    async with session.get(fallback_url) as alt_response:
+                        if alt_response.status == 200:
+                            return await alt_response.read()
+
+                return None
+        except Exception as e:
+            print(f"Error fetching product image for {product_id}: {e}")
+            return None
 
 
 # Global instance for easy importing

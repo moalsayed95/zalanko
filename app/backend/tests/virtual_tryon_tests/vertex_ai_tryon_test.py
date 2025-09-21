@@ -11,9 +11,10 @@ from dotenv import load_dotenv
 from datetime import datetime
 import base64
 
-# Load environment variables from parent directory
-parent_dir = Path(__file__).parent.parent
-env_path = parent_dir / '.env'
+# Load environment variables from backend directory (two levels up)
+backend_dir = Path(__file__).parent.parent.parent
+env_path = backend_dir / '.env'
+print(f"🔍 Looking for .env file at: {env_path}")
 load_dotenv(dotenv_path=env_path, override=True)
 
 try:

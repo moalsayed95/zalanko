@@ -65,8 +65,18 @@ export const useVirtualTryOn = () => {
                     const result = await response.json();
                     console.log("✅ Backend response:", result);
 
-                    if (result.image_url) {
-                        // Convert relative URL to full backend URL
+                    if (result.tryon_image) {
+                        // Convert base64 image to data URL for display
+                        const fullImageUrl = `data:image/png;base64,${result.tryon_image}`;
+
+                        console.log("🖼️ Generated virtual try-on image (base64)");
+
+                        setTryOnResult({
+                            imageUrl: fullImageUrl,
+                            timestamp: new Date()
+                        });
+                    } else if (result.image_url) {
+                        // Fallback for URL-based responses
                         const fullImageUrl = result.image_url.startsWith('http')
                             ? result.image_url
                             : `http://localhost:8765${result.image_url}`;
@@ -78,7 +88,7 @@ export const useVirtualTryOn = () => {
                             timestamp: new Date()
                         });
                     } else {
-                        console.log("⚠️ No image URL in response");
+                        console.log("⚠️ No image data in response");
                     }
                 } else {
                     console.log("❌ Backend API not available, status:", response.status);
